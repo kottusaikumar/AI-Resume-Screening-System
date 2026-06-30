@@ -29,8 +29,8 @@ Health check: `GET http://localhost:8000/api/health`
 ```bash
 cd neuralrecruit-frontend
 cp .env.example .env        # set VITE_API_URL and VITE_API_KEY (must match the backend's API_KEY)
-npm install                 # or bun install
-npm run dev                 # or bun run dev
+npm install                 # npm install
+npm run dev                 # npm run dev
 ```
 
 The app will be available at the printed local URL (typically `http://localhost:3000`).
