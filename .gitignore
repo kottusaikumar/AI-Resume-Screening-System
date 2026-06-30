@@ -36,7 +36,6 @@ dist-ssr
 *.sln
 *.sw?
 
-/TEST_IMAGES/
 /data/
 *.db
 *.db-shm
