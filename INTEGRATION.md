@@ -17,6 +17,8 @@ real backend instead of using a fake timer and hardcoded numbers.
 
 ```bash
 cd recruitiq-backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python main.py
 ```
