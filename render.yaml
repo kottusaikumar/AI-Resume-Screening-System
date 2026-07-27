@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: neuralrecruit-api
+    runtime: python
+    plan: free
+    rootDir: recruitiq-backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: SHOWCASE_MODE
+        value: "true"
+      - key: USE_NEURAL_EMBEDDINGS
+        value: "false"
+      - key: USE_SPACY
+        value: "false"
+      - key: PDF_OCR_ENABLED
+        value: "false"
+      - key: STORE_RESUME_PREVIEW
+        value: "false"
+      - key: DATABASE_PATH
+        value: /tmp/neuralrecruit-showcase.db
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        generateValue: true
+      # Set both values in Render after the service and Vercel URLs exist.
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+

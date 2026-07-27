@@ -1,0 +1,50 @@
+# Local tool and dependency caches
+.agents/
+.bun-cache/
+.uv-audit-cache/
+.uv-cache/
+.uv-python/
+tmp/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Frontend output and dependencies
+**/node_modules/
+**/.output/
+**/.nitro/
+**/.tanstack/
+**/.vinxi/
+**/.wrangler/
+**/.vercel/
+**/dist/
+**/dist-ssr/
+
+# Python environments and generated files
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/*.egg-info/
+
+# Runtime databases, caches, logs, and uploads
+data/
+**/data/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/*.sqlite3
+**/*.log
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
