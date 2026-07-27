@@ -214,10 +214,16 @@
  * Desktop density profile
  * -----------------------
  * Preserve the existing mobile layout while using a tighter information
- * density on laptop and monitor viewports. Interactive controls retain at
- * least a 44px primary target where they are used for sequential actions.
+ * density on laptop and monitor viewports. Users can still apply normal
+ * browser zoom when they need larger controls or text.
  */
 @media (min-width: 1024px) {
+  /* Match the information density of a browser set to 90% zoom. */
+  .app-workspace,
+  .landing-shell {
+    zoom: 90%;
+  }
+
   .app-workspace h1 {
     font-size: clamp(2rem, 2.2vw, 2.5rem);
     line-height: 1.08;

@@ -164,6 +164,33 @@ export class ApiError extends Error {}
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
   "http://localhost:8000";
+const TRANSIENT_API_STATUSES = new Set([502, 503, 504]);
+
+async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  maxAttempts = 2,
+): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(input, init);
+      if (attempt < maxAttempts && TRANSIENT_API_STATUSES.has(response.status)) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2500));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2500));
+      }
+    }
+  }
+
+  throw lastError;
+}
 
 let accessToken = "";
 
@@ -226,7 +253,7 @@ export async function login(email: string, password: string) {
 }
 
 export async function accessShowcase() {
-  const res = await fetch(`${API_BASE}/api/auth/showcase`, { method: "POST" });
+  const res = await fetchWithRetry(`${API_BASE}/api/auth/showcase`, { method: "POST" });
   return handleJsonResponse<{
     access_token: string;
     token_type: string;
@@ -257,7 +284,7 @@ export async function analyzeResume(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/analyze`, {
+    res = await fetchWithRetry(`${API_BASE}/api/analyze`, {
       method: "POST",
       headers: authHeaders(),
       body: form,
@@ -282,14 +309,14 @@ export async function reviewResume(file: File): Promise<ResumeReviewResult> {
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/review-resume`, {
+    res = await fetchWithRetry(`${API_BASE}/api/review-resume`, {
       method: "POST",
       headers: authHeaders(),
       body: form,
     });
   } catch {
     throw new ApiError(
-      "Couldn't reach the resume review server. Check that the backend is running.",
+      "The resume review service is still waking up. Please wait a few seconds and try again.",
     );
   }
   return handleJsonResponse<ResumeReviewResult>(
