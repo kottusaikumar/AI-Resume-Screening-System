@@ -21,9 +21,10 @@ SQLite history and settings are intentionally not treated as durable data.
      Vercel production URL after step 2.
 5. Confirm `https://<render-host>/api/health` returns `"status": "ok"`.
 
-The Render profile deliberately disables neural-model downloads, spaCy, and
-image-only PDF OCR so the API can fit the free 512 MB instance. Text-based PDF,
-DOCX, and TXT resumes remain supported.
+The Render profile deliberately disables neural-model downloads and spaCy.
+Image-only PDF OCR remains available through local RapidOCR/ONNX, constrained
+to two pages at 96 DPI so it can operate within the free 512 MB instance.
+Text-based PDF, DOCX, and TXT resumes remain supported without OCR overhead.
 
 ## 2. Deploy the frontend on Vercel
 
@@ -63,4 +64,3 @@ if `VITE_API_URL` changed.
 
 Never commit `.env` files, access tokens, candidate resumes, or generated
 SQLite databases.
-

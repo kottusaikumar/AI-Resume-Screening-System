@@ -46,14 +46,14 @@ export function Sidebar() {
   const location = useLocation();
 
   return (
-    <aside className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border bg-surface/40 backdrop-blur-xl">
-      <div className="px-6 pt-7 pb-8">
+    <aside className="workspace-sidebar hidden md:flex flex-col w-[220px] shrink-0 border-r border-border bg-surface/40 backdrop-blur-xl">
+      <div className="px-5 pt-5 pb-6">
         <div className="flex items-center gap-2.5">
-          <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-primary-glow grid place-items-center glow-primary">
-            <Radar className="size-5 text-primary-foreground" />
+          <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow grid place-items-center glow-primary">
+            <Radar className="size-4 text-primary-foreground" />
           </div>
           <div>
-            <div className="font-display font-bold text-lg leading-none">NeuralRecruit</div>
+            <div className="font-display font-bold text-base leading-none">NeuralRecruit</div>
             <div className="font-mono-label text-muted-foreground mt-1.5">
               PRECISION · HR · v2.1
             </div>
@@ -61,14 +61,14 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="px-3 flex-1 space-y-1">
+      <nav className="px-2.5 flex-1 space-y-1">
         {NAV.map((n) => {
           const active = location.pathname === n.to;
           return (
             <Link
               key={n.label}
               to={n.to}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition ${
                 active
                   ? "bg-primary/15 text-foreground border-l-2 border-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-2/50 border-l-2 border-transparent"
@@ -84,13 +84,13 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-4 pb-4 space-y-3">
+      <div className="px-3 pb-3 space-y-2.5">
         <button
           onClick={() => {
             resetScan();
             navigate({ to: "/" });
           }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-gradient-to-br from-primary to-primary-glow text-primary-foreground text-sm font-semibold hover:opacity-95 transition glow-primary"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md bg-gradient-to-br from-primary to-primary-glow text-primary-foreground text-sm font-semibold hover:opacity-95 transition glow-primary"
         >
           <Sparkles className="size-4" /> New Scan
         </button>
@@ -122,7 +122,7 @@ export function TopBar() {
 
   return (
     <header className="border-b border-border bg-surface/30 backdrop-blur-xl">
-      <div className="px-6 md:px-10 lg:px-12 max-w-[1480px] mx-auto h-16 flex items-center gap-6">
+      <div className="workspace-topbar-frame px-6 md:px-10 lg:px-8 max-w-[1360px] mx-auto h-16 lg:h-14 flex items-center gap-6 lg:gap-5">
         <div className="flex items-center gap-2.5">
           <span
             className={`size-2 rounded-full ${phase === "analyzing" && location.pathname === "/" ? "bg-primary animate-pulse" : "bg-success"}`}

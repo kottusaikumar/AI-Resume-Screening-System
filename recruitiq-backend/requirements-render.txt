@@ -15,4 +15,5 @@ slowapi==0.1.10
 python-dotenv==1.2.2
 PyJWT==2.13.0
 pwdlib[argon2]==0.3.0
-
+rapidocr==3.9.1
+onnxruntime==1.27.0

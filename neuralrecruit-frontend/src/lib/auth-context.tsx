@@ -7,12 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  accessShowcase,
-  ApiError,
-  setAccessToken,
-  type AuthUser,
-} from "./api";
+import { accessShowcase, ApiError, setAccessToken, type AuthUser } from "./api";
 
 interface AuthState {
   user: AuthUser | null;

@@ -20,7 +20,13 @@ services:
       - key: USE_SPACY
         value: "false"
       - key: PDF_OCR_ENABLED
-        value: "false"
+        value: "true"
+      - key: PDF_OCR_MAX_PAGES
+        value: "2"
+      - key: PDF_OCR_DPI
+        value: "96"
+      - key: PDF_OCR_MAX_PIXELS_PER_PAGE
+        value: "6000000"
       - key: STORE_RESUME_PREVIEW
         value: "false"
       - key: DATABASE_PATH
@@ -34,4 +40,3 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
-

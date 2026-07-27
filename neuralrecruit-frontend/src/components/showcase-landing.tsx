@@ -39,8 +39,18 @@ const WORKFLOW = [
 
 const SIGNALS = [
   { title: "Document quality", detail: "ATS readability verified", state: "complete", icon: Check },
-  { title: "Profile structure", detail: "Core sections detected", state: "complete", icon: FileSearch },
-  { title: "Skill intelligence", detail: "Reading candidate evidence", state: "active", icon: ScanLine },
+  {
+    title: "Profile structure",
+    detail: "Core sections detected",
+    state: "complete",
+    icon: FileSearch,
+  },
+  {
+    title: "Skill intelligence",
+    detail: "Reading candidate evidence",
+    state: "active",
+    icon: ScanLine,
+  },
   { title: "Role suggestions", detail: "Evidence-backed only", state: "", icon: Gauge },
 ] as const;
 
@@ -143,8 +153,8 @@ export function ShowcaseLanding({
             <span>Decide with evidence.</span>
           </h1>
           <p className="landing-hero-lede">
-            NeuralRecruit turns candidate resumes into structured, reviewable intelligence—then
-            adds job-description matching only when you need it. No LLM model API is required.
+            NeuralRecruit turns candidate resumes into structured, reviewable intelligence—then adds
+            job-description matching only when you need it. No LLM model API is required.
           </p>
           <div className="landing-actions">
             <button
@@ -280,8 +290,8 @@ export function ShowcaseLanding({
           <span>Purpose-built for technical hiring</span>
           <h2 id="modes-title">Four focused ways to review IT talent.</h2>
           <p>
-            Start with a single document or move into desktop comparison workflows. Mobile keeps
-            the two essential review modes clear and fast.
+            Start with a single document or move into desktop comparison workflows. Mobile keeps the
+            two essential review modes clear and fast.
           </p>
         </div>
         <div className="landing-mode-grid">
@@ -397,9 +407,9 @@ export function ShowcaseLanding({
           <span>Open-source architecture</span>
           <h2>Private processing with inspectable signals.</h2>
           <p>
-            NeuralRecruit uses deterministic parsing, an IT skill taxonomy, local vector
-            retrieval, lexical retrieval, and evidence-oriented scoring. No external LLM API sits
-            between the resume and the report.
+            NeuralRecruit uses deterministic parsing, an IT skill taxonomy, local vector retrieval,
+            lexical retrieval, and evidence-oriented scoring. No external LLM API sits between the
+            resume and the report.
           </p>
           <div className="landing-stack-list">
             <span>React + TypeScript</span>

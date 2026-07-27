@@ -183,8 +183,7 @@ function withScoreDefaults(result: ScreeningResult): ScreeningResult {
     experience_skill_score: result.experience_skill_score ?? 0,
     combined_resume_quality_score: result.combined_resume_quality_score ?? 0,
     score_disclaimer:
-      result.score_disclaimer ??
-      "Evidence alignment is advisory and requires human review.",
+      result.score_disclaimer ?? "Evidence alignment is advisory and requires human review.",
   };
 }
 

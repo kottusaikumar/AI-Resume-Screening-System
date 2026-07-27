@@ -210,6 +210,51 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/*
+ * Desktop density profile
+ * -----------------------
+ * Preserve the existing mobile layout while using a tighter information
+ * density on laptop and monitor viewports. Interactive controls retain at
+ * least a 44px primary target where they are used for sequential actions.
+ */
+@media (min-width: 1024px) {
+  .app-workspace h1 {
+    font-size: clamp(2rem, 2.2vw, 2.5rem);
+    line-height: 1.08;
+  }
+
+  .app-workspace .font-mono-label {
+    font-size: 10px;
+  }
+
+  .scanner-workspace {
+    font-size: 0.9375rem;
+  }
+
+  .scanner-mode-switch {
+    border-radius: 0.75rem;
+  }
+
+  .scanner-intro {
+    max-width: 56rem;
+  }
+
+  .scanner-panel {
+    border-radius: 0.75rem;
+  }
+
+  .scanner-dropzone {
+    gap: 0.75rem;
+    padding-block: 2rem;
+  }
+
+  .scanner-upload-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 0.875rem;
+  }
+}
+
 /* Neon scanner workspace, inspired by premium payment-scanner interfaces. */
 .screening-page {
   --primary: #4dff3c;

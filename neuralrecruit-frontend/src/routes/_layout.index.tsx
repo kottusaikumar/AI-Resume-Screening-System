@@ -361,8 +361,11 @@ function UploadView({
   const displayError = fileError || error;
 
   return (
-    <div className="space-y-8">
-      <div className="glass grid gap-2 rounded-xl p-2 sm:grid-cols-2" role="tablist">
+    <div className="scanner-workspace space-y-8 lg:space-y-6">
+      <div
+        className="scanner-mode-switch glass grid gap-2 rounded-xl p-2 sm:grid-cols-2 lg:gap-1.5 lg:p-1.5"
+        role="tablist"
+      >
         {[
           {
             value: "resume-review" as const,
@@ -383,14 +386,14 @@ function UploadView({
             role="tab"
             aria-selected={mode === option.value}
             onClick={() => setMode(option.value)}
-            className={`flex items-start gap-3 rounded-lg border p-4 text-left transition ${
+            className={`flex min-w-0 items-start gap-3 rounded-lg border p-4 text-left transition lg:p-3 ${
               mode === option.value
                 ? "border-primary/45 bg-primary/10 shadow-sm"
                 : "border-transparent hover:border-border hover:bg-surface-2/40"
             }`}
           >
             <span
-              className={`grid size-10 shrink-0 place-items-center rounded-lg border ${
+              className={`grid size-10 shrink-0 place-items-center rounded-lg border lg:size-9 ${
                 mode === option.value
                   ? "border-primary/30 bg-primary/15 text-primary-glow"
                   : "border-border bg-surface-2/50 text-muted-foreground"
@@ -398,7 +401,7 @@ function UploadView({
             >
               <option.icon className="size-4" />
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block font-display font-semibold">{option.title}</span>
               <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
                 {option.description}
@@ -408,11 +411,11 @@ function UploadView({
         ))}
       </div>
 
-      <header className="flex flex-col gap-2">
+      <header className="scanner-intro flex flex-col gap-2">
         <div className="font-mono-label text-primary-glow">
           // {mode === "resume-review" ? "initiate_resume_review" : "initiate_talent_scan"}
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+        <h1 className="text-4xl md:text-4xl font-bold tracking-tight">
           {mode === "resume-review" ? (
             <>
               Understand the <span className="text-gradient-primary">Resume</span>
@@ -423,7 +426,7 @@ function UploadView({
             </>
           )}
         </h1>
-        <p className="text-muted-foreground max-w-2xl">
+        <p className="text-muted-foreground max-w-2xl md:text-sm">
           {mode === "resume-review"
             ? "Upload one resume to inspect its structure, ATS readability, experience evidence, skills, and suitable role families. No job description or job-match score is used."
             : "Upload a candidate dossier and paste the role brief. The engine extracts skills, validates work history, and benchmarks evidence against the JD."}
@@ -455,9 +458,9 @@ function UploadView({
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[1.05fr_1fr] gap-6">
+      <div className="scanner-input-grid grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-5">
         {/* Upload */}
-        <section className="glass rounded-xl p-6 md:p-8 relative overflow-hidden">
+        <section className="scanner-panel glass min-w-0 rounded-xl p-6 relative overflow-hidden">
           <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
           <div className="relative flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
@@ -492,10 +495,10 @@ function UploadView({
               className="sr-only"
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
-            <div className="px-6 py-12 flex flex-col items-center text-center gap-4">
+            <div className="scanner-dropzone px-6 py-12 flex flex-col items-center text-center gap-4">
               {!fileName ? (
                 <>
-                  <div className="size-16 rounded-2xl bg-gradient-to-br from-primary/30 to-primary-glow/20 border border-primary/30 grid place-items-center animate-pulse-glow">
+                  <div className="scanner-upload-icon size-16 rounded-2xl bg-gradient-to-br from-primary/30 to-primary-glow/20 border border-primary/30 grid place-items-center animate-pulse-glow">
                     <UploadCloud className="size-7 text-primary-glow" />
                   </div>
                   <div>
@@ -512,7 +515,7 @@ function UploadView({
                 </>
               ) : (
                 <>
-                  <div className="size-16 rounded-2xl bg-success/15 border border-success/40 grid place-items-center glow-success">
+                  <div className="scanner-upload-icon size-16 rounded-2xl bg-success/15 border border-success/40 grid place-items-center glow-success">
                     <CheckCircle2 className="size-7 text-success" />
                   </div>
                   <div>
@@ -554,45 +557,45 @@ function UploadView({
 
         {/* JD or resume-only intelligence preview */}
         {mode === "job-match" ? (
-        <section className="glass rounded-xl p-6 md:p-8">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-md bg-success/15 border border-success/30 grid place-items-center">
-                <Briefcase className="size-4 text-success" />
+          <section className="scanner-panel glass min-w-0 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-md bg-success/15 border border-success/30 grid place-items-center">
+                  <Briefcase className="size-4 text-success" />
+                </div>
+                <h2 className="font-display font-semibold text-lg">Job Description</h2>
               </div>
-              <h2 className="font-display font-semibold text-lg">Job Description</h2>
+              <span className="font-mono-label text-muted-foreground">AUTO-DETECT: ON</span>
             </div>
-            <span className="font-mono-label text-muted-foreground">AUTO-DETECT: ON</span>
-          </div>
 
-          <textarea
-            value={jd}
-            onChange={(e) => setJd(e.target.value)}
-            placeholder="Paste the target role brief — key responsibilities, technical competencies, leadership requirements, and cultural expectations for the highest match precision…"
-            className="w-full h-[260px] rounded-lg bg-surface-2/40 border border-border focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30 p-4 text-sm font-mono leading-relaxed placeholder:text-muted-foreground/70 resize-none transition"
-          />
+            <textarea
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              placeholder="Paste the target role brief — key responsibilities, technical competencies, leadership requirements, and cultural expectations for the highest match precision…"
+              className="w-full h-[260px] rounded-lg bg-surface-2/40 border border-border focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30 p-4 text-sm font-mono leading-relaxed placeholder:text-muted-foreground/70 resize-none transition"
+            />
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="font-mono-label text-muted-foreground mr-1">QUICK_TEMPLATES:</span>
-            {TEMPLATES.map((t) => (
-              <button
-                key={t}
-                onClick={() => setJd(seedJD(t))}
-                className="px-3 py-1.5 rounded-full text-xs border border-border bg-surface-2/40 hover:border-primary/50 hover:text-primary-glow transition"
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="font-mono-label text-muted-foreground mr-1">QUICK_TEMPLATES:</span>
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setJd(seedJD(t))}
+                  className="px-3 py-1.5 rounded-full text-xs border border-border bg-surface-2/40 hover:border-primary/50 hover:text-primary-glow transition"
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-3 pt-5 border-t border-border">
-            <Stat label="TOKENS" value={`${Math.max(0, Math.round(jd.length / 4))}`} />
-            <Stat label="MODEL" value="Neural_L7" accent />
-            <Stat label="BIAS_FILTER" value="ON" accent />
-          </div>
-        </section>
+            <div className="mt-5 grid grid-cols-3 gap-3 pt-5 border-t border-border">
+              <Stat label="TOKENS" value={`${Math.max(0, Math.round(jd.length / 4))}`} />
+              <Stat label="MODEL" value="Neural_L7" accent />
+              <Stat label="BIAS_FILTER" value="ON" accent />
+            </div>
+          </section>
         ) : (
-          <section className="glass rounded-xl p-6 md:p-8">
+          <section className="scanner-panel glass min-w-0 rounded-xl p-6">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-md bg-success/15 border border-success/30 grid place-items-center">
@@ -602,14 +605,26 @@ function UploadView({
               </div>
               <span className="font-mono-label text-success">NO JD REQUIRED</span>
             </div>
-            <div className="rounded-xl border border-border bg-surface-2/30 p-5">
+            <div className="rounded-xl border border-border bg-surface-2/30 p-5 lg:p-4">
               <div className="font-mono-label text-muted-foreground">REVIEW_OUTPUT</div>
               <div className="mt-4 grid gap-3">
                 {[
-                  ["ATS & document quality", "Readability, length, action verbs, and quantified evidence"],
-                  ["Profile structure", "Summary, experience, education, skills, projects, certifications"],
-                  ["Career evidence", "Estimated experience, seniority, and structured work history"],
-                  ["Skill intelligence", "Detected capabilities and evidence-backed role suggestions"],
+                  [
+                    "ATS & document quality",
+                    "Readability, length, action verbs, and quantified evidence",
+                  ],
+                  [
+                    "Profile structure",
+                    "Summary, experience, education, skills, projects, certifications",
+                  ],
+                  [
+                    "Career evidence",
+                    "Estimated experience, seniority, and structured work history",
+                  ],
+                  [
+                    "Skill intelligence",
+                    "Detected capabilities and evidence-backed role suggestions",
+                  ],
                 ].map(([title, description]) => (
                   <div
                     key={title}
@@ -636,7 +651,7 @@ function UploadView({
       </div>
 
       {/* Run bar */}
-      <div className="glass rounded-xl p-5 flex flex-col md:flex-row items-center gap-4">
+      <div className="glass rounded-xl p-5 lg:p-4 flex flex-col md:flex-row items-center gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div
             className={`size-10 rounded-md grid place-items-center border ${canRun ? "bg-success/15 border-success/40 text-success" : "bg-surface-2/40 border-border text-muted-foreground"}`}
@@ -660,7 +675,7 @@ function UploadView({
         <button
           disabled={!canRun}
           onClick={onRun}
-          className={`inline-flex items-center gap-2 px-6 h-12 rounded-md font-semibold transition ${
+          className={`inline-flex items-center gap-2 px-6 h-12 lg:px-5 lg:h-11 rounded-md font-semibold transition ${
             canRun
               ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground glow-primary hover:scale-[1.02]"
               : "bg-surface-2/40 text-muted-foreground border border-border cursor-not-allowed"
@@ -1172,15 +1187,15 @@ export function ResultsView({
               {result.matched_skills.map((s) => {
                 const evidence = evidenceFor(s);
                 return (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/30 text-success text-xs font-mono"
-                >
-                  <CheckCircle2 className="size-3" /> {s}
-                  {evidence?.section && (
-                    <em className="not-italic text-success/70">· {evidence.section}</em>
-                  )}
-                </span>
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/30 text-success text-xs font-mono"
+                  >
+                    <CheckCircle2 className="size-3" /> {s}
+                    {evidence?.section && (
+                      <em className="not-italic text-success/70">· {evidence.section}</em>
+                    )}
+                  </span>
                 );
               })}
             </div>
@@ -1348,9 +1363,7 @@ function ResumeReviewView({
       <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="glass relative flex flex-col items-center overflow-hidden rounded-xl p-7 text-center">
           <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
-          <div className="font-mono-label relative text-muted-foreground">
-            RESUME_HEALTH
-          </div>
+          <div className="font-mono-label relative text-muted-foreground">RESUME_HEALTH</div>
           <ScoreRing score={Math.round(result.resume_health_score)} label="HEALTH_SCORE" />
           <p className="relative max-w-sm text-sm leading-relaxed text-muted-foreground">
             Combined document quality, ATS readability, and core-section completeness.
@@ -1438,9 +1451,7 @@ function ResumeReviewView({
               <div
                 key={label}
                 className={`rounded-lg border p-3 ${
-                  found
-                    ? "border-success/25 bg-success/5"
-                    : "border-border bg-surface-2/30"
+                  found ? "border-success/25 bg-success/5" : "border-border bg-surface-2/30"
                 }`}
               >
                 <div className="flex items-center gap-2 text-sm font-medium">
@@ -1468,7 +1479,10 @@ function ResumeReviewView({
         {result.suggested_roles.length ? (
           <div className="grid gap-4 md:grid-cols-3">
             {result.suggested_roles.map((role) => (
-              <article key={role.title} className="rounded-lg border border-border bg-surface-2/30 p-5">
+              <article
+                key={role.title}
+                className="rounded-lg border border-border bg-surface-2/30 p-5"
+              >
                 <div className="font-display font-semibold">{role.title}</div>
                 <div className="mt-1 font-mono-label text-success">
                   {role.evidence_count} skill signals

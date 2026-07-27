@@ -71,7 +71,7 @@ function LayoutComponent() {
           <Sidebar />
           <main className="flex-1 min-w-0">
             <TopBar />
-            <div className="px-6 md:px-10 lg:px-12 py-8 max-w-[1480px] mx-auto">
+            <div className="workspace-content px-6 md:px-10 lg:px-8 py-8 lg:py-6 max-w-[1360px] mx-auto">
               <Outlet />
             </div>
           </main>
