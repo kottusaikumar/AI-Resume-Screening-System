@@ -294,6 +294,7 @@
 
 .landing-product-stage {
   position: relative;
+  min-height: 526px;
   perspective: 1400px;
 }
 
@@ -307,7 +308,9 @@
 }
 
 .landing-preview-window {
+  height: 526px;
   overflow: hidden;
+  contain: layout paint;
   border: 1px solid rgba(132, 255, 118, 0.16);
   border-radius: 23px;
   background: rgba(7, 11, 8, 0.96);
@@ -1169,7 +1172,12 @@
   }
 
   .landing-preview-window {
+    height: auto;
     transform: none;
+  }
+
+  .landing-product-stage {
+    min-height: 0;
   }
 
   .landing-preview-body {
