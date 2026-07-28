@@ -1523,16 +1523,31 @@ function ResumeReviewView({
           <Wand2 className="size-5 text-primary-glow" />
           <h3 className="font-display text-xl font-semibold">Resume Improvements</h3>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {result.recommendations.slice(0, 6).map((recommendation, index) => (
-            <RecCard
-              key={recommendation}
-              icon={[Target, Gauge, Lightbulb][index % 3]}
-              title={`Priority ${index + 1}`}
-              body={recommendation}
-            />
-          ))}
-        </div>
+        {result.recommendations.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {result.recommendations.slice(0, 6).map((recommendation, index) => (
+              <RecCard
+                key={recommendation}
+                icon={[Target, Gauge, Lightbulb][index % 3]}
+                title={`Priority ${index + 1}`}
+                body={recommendation}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-3 rounded-lg border border-success/25 bg-success/5 p-5">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" />
+            <div>
+              <p className="font-display font-semibold text-success">
+                No high-priority improvements identified
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                This resume meets the current ATS, structure, evidence, and readability checks.
+                Continue reviewing the candidate evidence manually before making a hiring decision.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
