@@ -30,6 +30,7 @@ import {
   type ScreeningResult,
 } from "@/lib/api";
 import { useScanner, useExport } from "@/lib/scanner-context";
+import { useAuth } from "@/lib/auth-context";
 import { downloadCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_layout/")({
@@ -113,6 +114,7 @@ const TEMPLATES = ["Software Engineer", "Product Manager", "Data Scientist", "De
 type ScanMode = "resume-review" | "job-match";
 
 function ScannerPage() {
+  const { ensureAccess } = useAuth();
   const {
     phase,
     setPhase,
@@ -158,8 +160,17 @@ function ScannerPage() {
       }, delay),
     );
 
-    const request = mode === "resume-review" ? reviewResume(file) : analyzeResume(file, jd);
-    request
+    const request = async () => {
+      const hasAccess = await ensureAccess();
+      if (!hasAccess) {
+        throw new ApiError(
+          "The analysis server is temporarily unavailable. Please wait a moment and try again.",
+        );
+      }
+      return mode === "resume-review" ? reviewResume(file) : analyzeResume(file, jd);
+    };
+
+    request()
       .then((data) => {
         if (cancelled) return;
         stageTimers.forEach(window.clearTimeout);
@@ -682,7 +693,7 @@ function UploadView({
           }`}
         >
           <Sparkles className="size-4" />
-          {mode === "resume-review" ? "Review Resume" : "Run Job Match"}
+          {mode === "resume-review" ? "Analyse Resume" : "Run Job Match"}
           <ArrowRight className="size-4" />
         </button>
       </div>
@@ -778,7 +789,7 @@ function AnalyzingView({
         <div className="max-w-3xl">
           <div className="font-mono-label text-primary-glow">// secure_candidate_screening</div>
           <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
-            Screening candidate profile
+            {mode === "resume-review" ? "Analysing your resume..." : "Analysing candidate fit..."}
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
             {mode === "resume-review"

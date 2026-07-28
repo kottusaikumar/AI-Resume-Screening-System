@@ -110,13 +110,7 @@ const FAQ = [
   },
 ] as const;
 
-export function ShowcaseLanding({
-  onEnter,
-  entering = false,
-}: {
-  onEnter: () => void;
-  entering?: boolean;
-}) {
+export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
   return (
     <main className="landing-shell">
       <div className="landing-ambient landing-ambient-one" aria-hidden="true" />
@@ -136,8 +130,8 @@ export function ShowcaseLanding({
           <a href="#workflow">How it works</a>
           <a href="#safeguards">Safeguards</a>
         </nav>
-        <button className="landing-signin-link" type="button" onClick={onEnter} disabled={entering}>
-          {entering ? "Preparing workspace…" : "Enter showcase"}
+        <button className="landing-signin-link" type="button" onClick={onEnter}>
+          Enter showcase
           <ArrowRight aria-hidden="true" />
         </button>
       </header>
@@ -157,13 +151,8 @@ export function ShowcaseLanding({
             job-description matching only when you need it. No LLM model API is required.
           </p>
           <div className="landing-actions">
-            <button
-              type="button"
-              className="landing-primary-cta"
-              onClick={onEnter}
-              disabled={entering}
-            >
-              {entering ? "Preparing workspace…" : "Open Resume Review"}
+            <button type="button" className="landing-primary-cta" onClick={onEnter}>
+              Open Resume Review
               <ArrowRight aria-hidden="true" />
             </button>
             <a className="landing-secondary-cta" href="#workflow">
@@ -350,8 +339,8 @@ export function ShowcaseLanding({
             NeuralRecruit supports HR teams with structured evidence. It does not replace
             interviews, references, or professional judgment.
           </p>
-          <button type="button" onClick={onEnter} disabled={entering}>
-            {entering ? "Preparing workspace…" : "Enter HR showcase"}
+          <button type="button" onClick={onEnter}>
+            Enter HR showcase
             <ArrowRight aria-hidden="true" />
           </button>
         </div>
@@ -470,8 +459,8 @@ export function ShowcaseLanding({
           <a href="#roles">IT roles</a>
           <a href="#architecture">Architecture</a>
           <a href="#faq">FAQ</a>
-          <button type="button" onClick={onEnter} disabled={entering}>
-            {entering ? "Preparing…" : "Open showcase"}
+          <button type="button" onClick={onEnter}>
+            Open showcase
           </button>
         </div>
       </footer>
