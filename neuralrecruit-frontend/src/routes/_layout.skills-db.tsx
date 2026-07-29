@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Database, Loader2, Search } from "lucide-react";
 import { fetchSkillsDb, ApiError, type SkillsDb } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useExport } from "@/lib/scanner-context";
 import { downloadCsv } from "@/lib/csv";
 
@@ -11,17 +12,36 @@ export const Route = createFileRoute("/_layout/skills-db")({
 });
 
 function SkillsDbPage() {
+  const { ensureAccess } = useAuth();
   const { setExportConfig } = useExport();
   const [db, setDb] = useState<SkillsDb | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
+  const loadSkills = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const hasAccess = await ensureAccess();
+      if (!hasAccess) {
+        throw new ApiError(
+          "The skills database is temporarily unavailable. Please wait a moment and try again.",
+        );
+      }
+      setDb(await fetchSkillsDb());
+    } catch (reason) {
+      setDb(null);
+      setError(reason instanceof ApiError ? reason.message : "Couldn't load the skills database.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchSkillsDb()
-      .then(setDb)
-      .catch((e) =>
-        setError(e instanceof ApiError ? e.message : "Couldn't load the skills database."),
-      );
+    void loadSkills();
+    // Establish the showcase session once when this page mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -65,13 +85,22 @@ function SkillsDbPage() {
       </header>
 
       {error && (
-        <div className="glass rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-center gap-3">
-          <AlertTriangle className="size-4 text-destructive shrink-0" />
-          <div className="text-sm text-muted-foreground">{error}</div>
+        <div className="glass flex flex-col gap-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="size-4 shrink-0 text-destructive" />
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadSkills()}
+            className="rounded-lg border border-border bg-surface-2/60 px-4 py-2 text-sm font-semibold transition-colors hover:border-primary/50 hover:text-primary-glow"
+          >
+            Try again
+          </button>
         </div>
       )}
 
-      {!db && !error ? (
+      {loading ? (
         <div className="glass rounded-xl p-10 flex items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Loading skills database…
         </div>
