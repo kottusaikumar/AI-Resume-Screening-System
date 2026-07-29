@@ -21,10 +21,12 @@ SQLite history and settings are intentionally not treated as durable data.
      Vercel production URL after step 2.
 5. Confirm `https://<render-host>/api/health` returns `"status": "ok"`.
 
-The Render profile deliberately disables neural-model downloads and spaCy.
-Image-only PDF OCR remains available through local RapidOCR/ONNX, constrained
-to two pages at 96 DPI so it can operate within the free 512 MB instance.
-Text-based PDF, DOCX, and TXT resumes remain supported without OCR overhead.
+The Render profile deliberately disables neural-model downloads, spaCy, and
+server-side OCR. Image-only PDF pages are recognized in the browser only after
+the user clicks **Analyse Resume**, then the validated PDF and extracted text
+are submitted to the API. This prevents OCR model memory from exhausting the
+free 512 MB instance. Text-based PDF, DOCX, and TXT resumes remain supported
+without OCR overhead.
 
 ## 2. Deploy the frontend on Vercel
 
@@ -59,8 +61,10 @@ if `VITE_API_URL` changed.
 2. Confirm the public landing page renders before the backend is contacted.
 3. Select **Open Resume Review** and verify no login is shown.
 4. Upload a text-based PDF, DOCX, or TXT resume.
-5. Test Job Match and one Match Lab comparison.
-6. Confirm browser developer tools show no CORS, mixed-content, or 5xx errors.
+5. Upload a one- or two-page image-only PDF and confirm browser OCR progress is
+   shown before the report appears.
+6. Test Job Match and one Match Lab comparison.
+7. Confirm browser developer tools show no CORS, mixed-content, or 5xx errors.
 
 Never commit `.env` files, access tokens, candidate resumes, or generated
 SQLite databases.

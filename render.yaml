@@ -20,7 +20,7 @@ services:
       - key: USE_SPACY
         value: "false"
       - key: PDF_OCR_ENABLED
-        value: "true"
+        value: "false"
       - key: PDF_OCR_MAX_PAGES
         value: "2"
       - key: PDF_OCR_DPI

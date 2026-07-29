@@ -31,6 +31,7 @@ import {
 } from "@/lib/api";
 import { useScanner, useExport } from "@/lib/scanner-context";
 import { useAuth } from "@/lib/auth-context";
+import { extractScannedPdfText } from "@/lib/browser-ocr";
 import { downloadCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_layout/")({
@@ -134,6 +135,7 @@ function ScannerPage() {
   } = useScanner();
   const { setExportConfig } = useExport();
   const [mode, setMode] = useState<ScanMode>("resume-review");
+  const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (phase === "results" && !result && !reviewResult) {
@@ -151,6 +153,7 @@ function ScannerPage() {
     let cancelled = false;
     setProgress(0);
     setActiveStep(0);
+    setAnalysisStatus("Preparing your resume for analysis…");
 
     // The API doesn't stream measurable progress, so show honest, time-based
     // processing phases instead of presenting a fabricated percentage.
@@ -161,13 +164,29 @@ function ScannerPage() {
     );
 
     const request = async () => {
+      const browserExtractedText = await extractScannedPdfText(file, ({ message, progress }) => {
+        if (cancelled) return;
+        setAnalysisStatus(message);
+        if (typeof progress === "number") {
+          setProgress(Math.round(progress * 35));
+        }
+      });
+      if (cancelled) throw new Error("Analysis cancelled.");
+
+      setAnalysisStatus(
+        mode === "resume-review"
+          ? "Analysing resume structure, skills, and career evidence…"
+          : "Comparing resume evidence with the role requirements…",
+      );
       const hasAccess = await ensureAccess();
       if (!hasAccess) {
         throw new ApiError(
           "The analysis server is temporarily unavailable. Please wait a moment and try again.",
         );
       }
-      return mode === "resume-review" ? reviewResume(file) : analyzeResume(file, jd);
+      return mode === "resume-review"
+        ? reviewResume(file, browserExtractedText)
+        : analyzeResume(file, jd, "", browserExtractedText);
     };
 
     request()
@@ -194,8 +213,11 @@ function ScannerPage() {
         const message =
           err instanceof ApiError
             ? err.message
-            : "Something went wrong while analyzing the resume. Please try again.";
+            : err instanceof Error
+              ? err.message
+              : "Something went wrong while analyzing the resume. Please try again.";
         setError(message);
+        setAnalysisStatus(null);
         setPhase("upload");
       });
 
@@ -297,7 +319,12 @@ function ScannerPage() {
         />
       )}
       {phase === "analyzing" && (
-        <AnalyzingView activeStep={activeStep} fileName={fileName} mode={mode} />
+        <AnalyzingView
+          activeStep={activeStep}
+          fileName={fileName}
+          mode={mode}
+          analysisStatus={analysisStatus}
+        />
       )}
       {phase === "results" && reviewResult && (
         <ResumeReviewView
@@ -754,10 +781,12 @@ function AnalyzingView({
   activeStep,
   fileName,
   mode,
+  analysisStatus,
 }: {
   activeStep: number;
   fileName: string | null;
   mode: ScanMode;
+  analysisStatus: string | null;
 }) {
   const steps = mode === "resume-review" ? REVIEW_STEPS : STEPS;
   const stepFeatures = mode === "resume-review" ? REVIEW_STEP_FEATURES : STEP_FEATURES;
@@ -792,9 +821,10 @@ function AnalyzingView({
             {mode === "resume-review" ? "Analysing your resume..." : "Analysing candidate fit..."}
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            {mode === "resume-review"
-              ? "Reading the resume and organizing its skills, career evidence, and document-quality signals."
-              : "Reading the resume, organizing evidence, and comparing it with the role benchmark."}
+            {analysisStatus ??
+              (mode === "resume-review"
+                ? "Reading the resume and organizing its skills, career evidence, and document-quality signals."
+                : "Reading the resume, organizing evidence, and comparing it with the role benchmark.")}
           </p>
         </div>
         <div className="screening-time-card flex items-center gap-3 rounded-xl border border-border bg-surface/60 px-4 py-3">

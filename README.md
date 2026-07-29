@@ -26,7 +26,7 @@ required.
 - **Explain results** - show detected skills, missing evidence, section coverage,
   recommendations, and scoring components instead of a black-box verdict.
 - **Read common formats** - process text-based PDF, DOCX, and TXT resumes, with
-  constrained local OCR fallback for scanned PDFs.
+  lazy browser OCR for scanned PDFs in the public showcase.
 - **Export evidence** - download structured comparison results as CSV.
 
 ## Live services
@@ -50,7 +50,7 @@ Resume / Job Description
  Secure upload validation
           |
           v
- Text extraction + optional local OCR
+ Text extraction + on-demand browser OCR
           |
           v
  Section, skill, date, and experience analysis
@@ -62,9 +62,10 @@ Resume / Job Description
  Explainable evidence report for human review
 ```
 
-The production free-tier profile disables memory-heavy neural embeddings and
-spaCy. It uses deterministic taxonomy matching, TF-IDF/LSA, BM25, rule-based NLP,
-and locally constrained OCR.
+The production free-tier profile disables memory-heavy neural embeddings,
+spaCy, and server-side OCR. It uses deterministic taxonomy matching,
+TF-IDF/LSA, BM25, and rule-based NLP. Scanned PDF pages are read temporarily in
+the user's browser before validated text is submitted to the API.
 
 ## Technology
 
@@ -73,6 +74,7 @@ and locally constrained OCR.
 - React 19 and TypeScript
 - TanStack Start and TanStack Router
 - Vite and Tailwind CSS
+- PDF.js and Tesseract.js, loaded only when a scanned PDF is analyzed
 - Radix UI and Lucide icons
 - Deployed on Vercel
 
@@ -82,7 +84,7 @@ and locally constrained OCR.
 - Pydantic and Uvicorn
 - scikit-learn, NumPy, and `rank_bm25`
 - PyMuPDF and `python-docx`
-- RapidOCR and ONNX Runtime
+- Optional RapidOCR and ONNX Runtime for non-showcase/local deployments
 - SQLite for lightweight showcase data
 - Deployed on Render
 

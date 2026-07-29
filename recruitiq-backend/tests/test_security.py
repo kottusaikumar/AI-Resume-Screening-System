@@ -1,6 +1,7 @@
 from pathlib import Path
 import sqlite3
 
+import fitz
 import pytest
 from fastapi.testclient import TestClient
 
@@ -116,6 +117,36 @@ def test_resume_review_does_not_require_or_invent_job_match(client: TestClient):
     assert result["section_analysis"]["has_skills"] is True
     assert any(skill.lower() == "python" for skill in result["extracted_skills"])
     assert result["suggested_roles"]
+
+
+def test_resume_review_accepts_browser_ocr_for_validated_pdf(client: TestClient):
+    headers = _login(client)
+    document = fitz.open()
+    document.new_page()
+    pdf_bytes = document.tobytes()
+    document.close()
+    browser_text = """
+    SUMMARY
+    Data analyst with four years of reporting experience.
+    SKILLS
+    Python, SQL, Power BI, Tableau, pandas, statistics
+    EXPERIENCE
+    Data Analyst, Example Company, 2021 to Present.
+    EDUCATION
+    Bachelor of Technology
+    """
+
+    response = client.post(
+        "/api/review-resume",
+        headers=headers,
+        files={"resume": ("scanned-candidate.pdf", pdf_bytes, "application/pdf")},
+        data={"blind_mode": "true", "browser_extracted_text": browser_text},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["resume_filename"] == "scanned-candidate.pdf"
+    assert any(skill.lower() == "python" for skill in result["extracted_skills"])
 
 
 def test_multi_role_comparison_requires_valid_role_list(client: TestClient):

@@ -73,8 +73,9 @@ def _ocr_pdf_page(page: fitz.Page) -> str:
     return "\n".join(cleaned_lines)
 
 
-def extract_text_from_pdf(path: str) -> str:
+def extract_text_from_pdf(path: str, enable_ocr: bool | None = None) -> str:
     text: list[str] = []
+    should_use_ocr = config.PDF_OCR_ENABLED if enable_ocr is None else enable_ocr
     try:
         with fitz.open(path) as doc:
             pages_needing_ocr = 0
@@ -84,7 +85,7 @@ def extract_text_from_pdf(path: str) -> str:
                     text.append(native_text)
                     continue
 
-                if not config.PDF_OCR_ENABLED:
+                if not should_use_ocr:
                     text.append(native_text)
                     continue
 
@@ -118,10 +119,10 @@ def extract_text_from_txt(path: str) -> str:
         raise RuntimeError(f"Failed to read TXT: {e}") from e
 
 
-def extract_text(file_path: str) -> str:
+def extract_text(file_path: str, enable_pdf_ocr: bool | None = None) -> str:
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".pdf":
-        return extract_text_from_pdf(file_path)
+        return extract_text_from_pdf(file_path, enable_ocr=enable_pdf_ocr)
     elif ext == ".docx":
         return extract_text_from_docx(file_path)
     elif ext == ".txt":

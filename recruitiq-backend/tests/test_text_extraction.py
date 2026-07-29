@@ -48,6 +48,18 @@ def test_image_only_pdf_uses_local_ocr_fallback(tmp_path, monkeypatch):
     assert extracted == "Candidate resume extracted by local OCR"
 
 
+def test_image_only_pdf_can_skip_server_ocr(tmp_path, monkeypatch):
+    pdf_path = tmp_path / "browser-ocr-resume.pdf"
+    _save_pdf(pdf_path)
+
+    def unexpected_ocr(_page):
+        raise AssertionError("Server OCR must remain disabled for browser-OCR uploads")
+
+    monkeypatch.setattr(text_extraction, "_ocr_pdf_page", unexpected_ocr)
+
+    assert text_extraction.extract_text_from_pdf(str(pdf_path), enable_ocr=False) == ""
+
+
 def test_scanned_pdf_page_limit_is_enforced(tmp_path, monkeypatch):
     pdf_path = tmp_path / "oversized-scan.pdf"
     _save_pdf(pdf_path, page_count=2)

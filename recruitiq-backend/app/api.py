@@ -23,6 +23,7 @@ Every endpoint except health and login requires a bearer access token.
 
 import json
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -434,16 +435,41 @@ def _run_screening(
     return response
 
 
-async def _extract_uploaded_resume_text(resume: UploadFile, ext: str) -> str:
+async def _extract_uploaded_resume_text(
+    resume: UploadFile,
+    ext: str,
+    browser_extracted_text: str = "",
+) -> str:
     """Stream-save + extract text for one uploaded resume file, cleaning up
     the temp file afterwards regardless of outcome."""
     tmp_path = await _save_upload_enforcing_limit(resume, ext)
     try:
         with open(tmp_path, "rb") as uploaded_file:
             validate_file_signature(uploaded_file.read(), ext)
+        supplied_text = browser_extracted_text.strip()
+        if supplied_text:
+            if ext != ".pdf":
+                raise UnsafeUploadError(
+                    "Browser-extracted text is accepted only for validated PDF uploads."
+                )
+            if len(supplied_text) > config.MAX_TEXT_FIELD_CHARS:
+                raise UnsafeUploadError(
+                    f"Extracted resume text is too long (max {config.MAX_TEXT_FIELD_CHARS:,} characters)."
+                )
+            if len(re.sub(r"\s+", "", supplied_text)) < config.PDF_OCR_MIN_TEXT_CHARS:
+                raise UnsafeUploadError(
+                    "Browser OCR did not extract enough readable resume text."
+                )
+            return supplied_text
         # Native extraction is fast, but scanned-PDF OCR is CPU intensive.
         # Keep both off the async event loop so other API requests stay responsive.
-        return await run_in_threadpool(extract_text, tmp_path)
+        # The public showcase delegates scanned-PDF OCR to the browser so a
+        # single scan cannot exhaust the free Render instance's memory.
+        return await run_in_threadpool(
+            extract_text,
+            tmp_path,
+            enable_pdf_ocr=not config.SHOWCASE_MODE,
+        )
     finally:
         try:
             os.unlink(tmp_path)
@@ -530,6 +556,7 @@ async def review_resume(
     request: Request,
     resume: UploadFile = File(...),
     blind_mode: bool = Form(default=config.BLIND_SCREENING_DEFAULT),
+    browser_extracted_text: str = Form(default=""),
     _: CurrentUser = Depends(require_recruiter),
 ):
     """Review resume structure, evidence, and ATS quality without a JD."""
@@ -546,7 +573,11 @@ async def review_resume(
         )
 
     try:
-        resume_text = await _extract_uploaded_resume_text(resume, ext)
+        resume_text = await _extract_uploaded_resume_text(
+            resume,
+            ext,
+            browser_extracted_text=browser_extracted_text,
+        )
     except (UnsupportedFileTypeError, UnsafeUploadError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -554,8 +585,9 @@ async def review_resume(
         raise HTTPException(
             status_code=400,
             detail=(
-                "Could not extract readable text from the resume, including after local OCR. "
-                "Please upload a clearer PDF, DOCX, or TXT file."
+                "Could not extract readable text from the resume. For a scanned PDF, "
+                "keep this page open while browser OCR finishes, or upload a clearer "
+                "searchable PDF, DOCX, or TXT file."
             ),
         )
 
@@ -576,6 +608,7 @@ async def analyze(
     job_description: str = Form(...),
     mandatory_skills: str = Form(default=""),
     blind_mode: bool = Form(default=config.BLIND_SCREENING_DEFAULT),
+    browser_extracted_text: str = Form(default=""),
     user: CurrentUser = Depends(require_recruiter),
 ):
     if not resume.filename:
@@ -603,7 +636,11 @@ async def analyze(
         raise HTTPException(status_code=413, detail="Mandatory skills field is too long.")
 
     try:
-        resume_text = await _extract_uploaded_resume_text(resume, ext)
+        resume_text = await _extract_uploaded_resume_text(
+            resume,
+            ext,
+            browser_extracted_text=browser_extracted_text,
+        )
     except (UnsupportedFileTypeError, UnsafeUploadError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
@@ -613,8 +650,9 @@ async def analyze(
         raise HTTPException(
             status_code=400,
             detail=(
-                "Could not extract readable text from the resume, including after local OCR. "
-                "Please upload a clearer PDF, DOCX, or TXT file."
+                "Could not extract readable text from the resume. For a scanned PDF, "
+                "keep this page open while browser OCR finishes, or upload a clearer "
+                "searchable PDF, DOCX, or TXT file."
             ),
         )
 

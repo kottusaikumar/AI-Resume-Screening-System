@@ -275,12 +275,16 @@ export async function analyzeResume(
   file: File,
   jobDescription: string,
   mandatorySkills = "",
+  browserExtractedText?: string,
 ): Promise<ScreeningResult> {
   const form = new FormData();
   form.append("resume", file);
   form.append("job_description", jobDescription);
   form.append("blind_mode", "true");
   if (mandatorySkills.trim()) form.append("mandatory_skills", mandatorySkills.trim());
+  if (browserExtractedText?.trim()) {
+    form.append("browser_extracted_text", browserExtractedText.trim());
+  }
 
   let res: Response;
   try {
@@ -302,10 +306,16 @@ export async function analyzeResume(
   return withScoreDefaults(result);
 }
 
-export async function reviewResume(file: File): Promise<ResumeReviewResult> {
+export async function reviewResume(
+  file: File,
+  browserExtractedText?: string,
+): Promise<ResumeReviewResult> {
   const form = new FormData();
   form.append("resume", file);
   form.append("blind_mode", "true");
+  if (browserExtractedText?.trim()) {
+    form.append("browser_extracted_text", browserExtractedText.trim());
+  }
 
   let res: Response;
   try {
