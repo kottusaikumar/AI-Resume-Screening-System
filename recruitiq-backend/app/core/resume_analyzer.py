@@ -168,85 +168,220 @@ def _is_education_line(line: str) -> bool:
     return bool(EDUCATION_BLOCK_RE.search(line))
 
 
+_EXPERIENCE_HEADER_RE = re.compile(
+    r"^\s*(?:(?:professional|work)\s+)?"
+    r"(?:experience|employment|work\s+history|career\s+history|internships?)"
+    r"(?:\s*(?:&|and|/)\s*internships?)?\s*:?\s*$",
+    re.I,
+)
+_NON_EXPERIENCE_HEADER_RE = re.compile(
+    r"^\s*(?:"
+    r"professional\s+summary|summary|objective|profile|about\s+me|"
+    r"education|academic(?:\s+background)?|qualifications?|"
+    r"skills?|technical\s+skills?|core\s+competencies|"
+    r"projects?|portfolio|"
+    r"certifications?|certificates?|licenses?|credentials?|training|"
+    r"awards?|achievements?|publications?|"
+    r"leadership(?:\s+activities)?|activities|volunteering|"
+    r"languages?|interests?|references?"
+    r")\s*:?\s*$",
+    re.I,
+)
+_WORK_CONTEXT_RE = re.compile(
+    r"\b(?:"
+    r"intern|engineer|developer|analyst|scientist|manager|consultant|"
+    r"employment|experience|company|contract|freelance|position|role"
+    r")\b",
+    re.I,
+)
+_NON_WORK_CONTEXT_RE = re.compile(
+    r"\b(?:education|university|college|school|degree|cgpa|gpa|"
+    r"certification|certificate|issued|project|portfolio)\b",
+    re.I,
+)
+_MONTH_WORD = (
+    r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|"
+    r"jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|"
+    r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+)
+_DATE_SEPARATOR = r"(?:-|\u2013|\u2014|\u2212|\bto\b)"
+_PRESENT_WORD = r"(?:present|current|now|ongoing|till\s+date|to\s+date)"
+_MONTH_RANGE_RE = re.compile(
+    rf"\b(?P<start_month>{_MONTH_WORD})\.?[\s,/-]+"
+    rf"(?P<start_year>20\d{{2}}|19\d{{2}})\s*{_DATE_SEPARATOR}\s*"
+    rf"(?:(?P<end_month>{_MONTH_WORD})\.?[\s,/-]+"
+    rf"(?P<end_year>20\d{{2}}|19\d{{2}})|(?P<present>{_PRESENT_WORD}))\b",
+    re.I,
+)
+_NUMERIC_MONTH_RANGE_RE = re.compile(
+    rf"\b(?P<start_month>0?[1-9]|1[0-2])[/.-](?P<start_year>20\d{{2}}|19\d{{2}})"
+    rf"\s*{_DATE_SEPARATOR}\s*"
+    rf"(?:(?P<end_month>0?[1-9]|1[0-2])[/.-](?P<end_year>20\d{{2}}|19\d{{2}})"
+    rf"|(?P<present>{_PRESENT_WORD}))\b",
+    re.I,
+)
+_EXPERIENCE_YEAR_RANGE_RE = re.compile(
+    rf"\b(?P<start_year>20\d{{2}}|19\d{{2}})\s*{_DATE_SEPARATOR}\s*"
+    rf"(?:(?P<end_year>20\d{{2}}|19\d{{2}})|(?P<present>{_PRESENT_WORD}))\b",
+    re.I,
+)
+
+
+def _extract_experience_scope(text: str) -> str:
+    """
+    Return text that belongs to explicit work-experience sections.
+
+    If a resume has no section heading, use only date ranges with nearby job
+    context. This conservative fallback is preferable to treating education,
+    certification, or project dates as employment.
+    """
+    lines = text.splitlines()
+    scoped_lines: List[str] = []
+    in_experience = False
+    found_header = False
+
+    for line in lines:
+        stripped = line.strip()
+        if _EXPERIENCE_HEADER_RE.fullmatch(stripped):
+            in_experience = True
+            found_header = True
+            continue
+        if in_experience and _NON_EXPERIENCE_HEADER_RE.fullmatch(stripped):
+            in_experience = False
+            continue
+        if in_experience:
+            scoped_lines.append(line)
+
+    if found_header:
+        return "\n".join(scoped_lines)
+
+    fallback_lines: List[str] = []
+    range_patterns = (
+        _MONTH_RANGE_RE,
+        _NUMERIC_MONTH_RANGE_RE,
+        _EXPERIENCE_YEAR_RANGE_RE,
+    )
+    for index, line in enumerate(lines):
+        if not any(pattern.search(line) for pattern in range_patterns):
+            continue
+        context = " ".join(lines[max(0, index - 2):index + 1])
+        if _WORK_CONTEXT_RE.search(context) and not _NON_WORK_CONTEXT_RE.search(context):
+            fallback_lines.append(context)
+
+    return "\n".join(fallback_lines)
+
+
+def _month_number(value: str) -> int:
+    if value.isdigit():
+        return int(value)
+    return {
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
+    }[value[:3].lower()]
+
+
+def _month_index(year: int, month: int) -> int:
+    return year * 12 + month - 1
+
+
+def _extract_experience_intervals(
+    experience_text: str,
+    today: Optional[datetime.date] = None,
+) -> List[Tuple[int, int]]:
+    """Extract half-open month intervals from work-history date ranges."""
+    today = today or datetime.date.today()
+    intervals: List[Tuple[int, int]] = []
+    occupied_spans: List[Tuple[int, int]] = []
+
+    def overlaps_existing(start: int, end: int) -> bool:
+        return any(start < used_end and end > used_start for used_start, used_end in occupied_spans)
+
+    for pattern in (_MONTH_RANGE_RE, _NUMERIC_MONTH_RANGE_RE):
+        for match in pattern.finditer(experience_text):
+            if overlaps_existing(*match.span()):
+                continue
+            start_year = int(match.group("start_year"))
+            start_month = _month_number(match.group("start_month"))
+            if match.group("present"):
+                end_year, end_month = today.year, today.month
+            else:
+                end_year = int(match.group("end_year"))
+                end_month = _month_number(match.group("end_month"))
+
+            if start_year > today.year + 1 or end_year > today.year + 1:
+                continue
+            start_index = _month_index(start_year, start_month)
+            end_index = _month_index(end_year, end_month) + 1
+            if end_index <= start_index:
+                continue
+            intervals.append((start_index, end_index))
+            occupied_spans.append(match.span())
+
+    for match in _EXPERIENCE_YEAR_RANGE_RE.finditer(experience_text):
+        if overlaps_existing(*match.span()):
+            continue
+        start_year = int(match.group("start_year"))
+        if match.group("present"):
+            end_year = today.year
+            end_index = _month_index(today.year, today.month) + 1
+        else:
+            end_year = int(match.group("end_year"))
+            end_index = _month_index(end_year, 1)
+
+        if start_year > today.year + 1 or end_year > today.year + 1:
+            continue
+        start_index = _month_index(start_year, 1)
+        if end_index <= start_index:
+            # With year-only dates, a same-year role has unknown month
+            # precision. Count one year rather than inventing exact months.
+            end_index = start_index + 12
+        intervals.append((start_index, end_index))
+        occupied_spans.append(match.span())
+
+    return intervals
+
+
+def _merged_month_count(intervals: List[Tuple[int, int]]) -> int:
+    """Merge overlapping/adjacent employment intervals and count each month once."""
+    if not intervals:
+        return 0
+
+    merged: List[List[int]] = []
+    for start, end in sorted(intervals):
+        if not merged or start > merged[-1][1]:
+            merged.append([start, end])
+        else:
+            merged[-1][1] = max(merged[-1][1], end)
+    return sum(end - start for start, end in merged)
+
+
 def estimate_experience(text: str) -> ExperienceInfo:
     """
-    Estimate WORK experience years only — filters out education date ranges.
-    Strategy:
-    1. Split text into lines
-    2. Tag lines as education or work context
-    3. Only collect years from work/internship/project context
-    4. Use earliest work year → latest work year (or present) as span
+    Estimate dated work experience from employment intervals only.
+
+    Month-level ranges are inclusive (Jul-Sep is three months). Overlapping
+    roles are merged so concurrent employment is not double-counted. Dates in
+    education, certification, project, and other non-work sections are ignored.
     """
-    current_year = datetime.datetime.now().year
-    lines = text.splitlines()
-
-    # Identify education section bounds
-    in_education = False
-    education_years: Set[int] = set()
-    work_years: Set[int] = set()
-    has_present = False
-
-    # Pass 1: tag each line
-    for line in lines:
-        line_lower = line.lower()
-        # Toggle education section
-        if re.search(r"^\s*(education|academic background)", line, re.I):
-            in_education = True
-        elif re.search(r"^\s*(experience|internship|project|certif|skill|summary)", line, re.I):
-            in_education = False
-
-        # Check for present
-        if PRESENT_RE.search(line):
-            has_present = True
-
-        # Extract years from this line
-        line_years = [int(m) for m in DATE_YEAR_RE.findall(line)
-                      if 1990 <= int(m) <= current_year + 1]
-
-        if in_education or _is_education_line(line):
-            education_years.update(line_years)
-        else:
-            work_years.update(line_years)
-
-    # Work years = all detected years MINUS pure-education-only years
-    # (years that appear in work context too are kept)
-    pure_edu_only = education_years - work_years
-    effective_work_years = work_years  # years found in non-education lines
-
-    # Also check year ranges explicitly for internship/work markers
-    work_context_re = re.compile(
-        r"(intern|work|employ|position|role|project|freelance|contract|job)", re.I
+    experience_text = _extract_experience_scope(text)
+    total_months = _merged_month_count(
+        _extract_experience_intervals(experience_text)
     )
-    for m in YEAR_RANGE_RE.finditer(text):
-        # Find context around the match
-        start = max(0, m.start() - 100)
-        context = text[start:m.end() + 50]
-        yr1 = int(m.group(1))
-        yr2_str = m.group(2)
-        if work_context_re.search(context) or not EDUCATION_BLOCK_RE.search(context):
-            effective_work_years.add(yr1)
-            if yr2_str.isdigit():
-                effective_work_years.add(int(yr2_str))
-            else:
-                has_present = True
-
-    if not effective_work_years:
-        # Fallback: if no work years found, check if any internship dates exist
-        for line in lines:
-            if re.search(r"\b(intern|NOV|AUG|FEB|OCT)\b", line, re.I):
-                for yr in DATE_YEAR_RE.findall(line):
-                    y = int(yr)
-                    if 2000 <= y <= current_year:
-                        effective_work_years.add(y)
-
-    if not effective_work_years:
+    if total_months == 0:
         return ExperienceInfo(estimated_years=0.0, seniority_level="Entry-level")
 
-    earliest_work = min(effective_work_years)
-    latest_work   = current_year if has_present else max(effective_work_years)
-    total_yrs     = max(0.0, float(latest_work - earliest_work))
+    total_yrs = total_months / 12.0
 
-    # FIX 4: Tighter seniority thresholds — fresh grads correctly show Entry-level
     if total_yrs < 2:
         level = "Entry-level"
     elif total_yrs < 5:
