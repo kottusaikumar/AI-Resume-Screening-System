@@ -533,6 +533,16 @@ def analyze_sections(text: str) -> SectionAnalysis:
 
 def _parse_dates(text: str) -> Tuple[Optional[int], Optional[int], Optional[int]]:
     """Parses start year, end year, and duration in months from a text snippet."""
+    intervals = _extract_experience_intervals(_normalize_extracted_date_text(text))
+    if intervals:
+        start_index = min(start for start, _ in intervals)
+        end_index = max(end for _, end in intervals)
+        return (
+            start_index // 12,
+            (end_index - 1) // 12,
+            _merged_month_count(intervals),
+        )
+
     start_year, end_year, duration_months = None, None, None
     current_year = datetime.datetime.now().year
 
@@ -694,6 +704,7 @@ def _parse_education_entries(education_text: str) -> List[EducationEntry]:
 def analyze_detailed_resume(text: str) -> DetailedResumeAnalysis:
     """Performs a detailed analysis of resume sections, job roles, education, and skills with context."""
     extracted_raw_sections = _extract_sections_raw(text)
+    canonical_experience = estimate_experience(text)
     
     resume_sections = ResumeSections(
         summary=extracted_raw_sections.get("summary"),
@@ -703,8 +714,10 @@ def analyze_detailed_resume(text: str) -> DetailedResumeAnalysis:
     )
 
     # Parse experience and education into structured objects
-    if "experience" in extracted_raw_sections:
-        resume_sections.experience = _parse_job_roles(extracted_raw_sections["experience"])
+    experience_scope = _extract_experience_scope(_normalize_extracted_date_text(text))
+    if experience_scope:
+        extracted_raw_sections["experience"] = experience_scope
+        resume_sections.experience = _parse_job_roles(experience_scope)
     if "education" in extracted_raw_sections:
         resume_sections.education = _parse_education_entries(extracted_raw_sections["education"])
     
@@ -717,12 +730,16 @@ def analyze_detailed_resume(text: str) -> DetailedResumeAnalysis:
             if section_name == "experience":
                 # Try to associate skill with a specific job role and its dates
                 for job_role in resume_sections.experience:
-                    if job_role.description and skill.lower() in job_role.description.lower():
-                        s_year, e_year, d_months = _parse_dates(job_role.description)
-                        start_year = s_year
-                        end_year = e_year
-                        duration_months = d_months
-                        break # Associate with the first job role it's found in
+                    role_text = " ".join(
+                        part
+                        for part in (job_role.title, job_role.company, job_role.description)
+                        if part
+                    )
+                    if skill.lower() in role_text.lower():
+                        start_year = int(job_role.start_date) if job_role.start_date else None
+                        end_year = int(job_role.end_date) if job_role.end_date else None
+                        duration_months = job_role.duration_months
+                        break  # Associate with the first job role it's found in
             
             all_extracted_skills.append(SkillWithContext(
                 skill=skill,
@@ -735,43 +752,11 @@ def analyze_detailed_resume(text: str) -> DetailedResumeAnalysis:
     # Collect all unique skills found across the resume
     resume_sections.skills = list(set([s.skill for s in all_extracted_skills]))
 
-    # Re-estimate total experience using the more robust _parse_dates from all experience descriptions
-    total_experience_years = 0.0
-    if resume_sections.experience:
-        all_work_years = set()
-        has_present_in_work = False
-        for job_role in resume_sections.experience:
-            if job_role.start_date and job_role.end_date:
-                try:
-                    start_y = int(job_role.start_date)
-                    end_y = int(job_role.end_date)
-                    all_work_years.add(start_y)
-                    all_work_years.add(end_y)
-                    if job_role.end_date.lower() in ["present", "current", "now"]:
-                        has_present_in_work = True
-                except ValueError:
-                    pass # Handle cases where date is not a simple year
-        
-        if all_work_years:
-            earliest_work = min(all_work_years)
-            latest_work = datetime.datetime.now().year if has_present_in_work else max(all_work_years)
-            total_experience_years = max(0.0, float(latest_work - earliest_work))
-
-    # Determine seniority level based on total_experience_years
-    if total_experience_years < 2:
-        seniority_level = "Entry-level"
-    elif total_experience_years < 5:
-        seniority_level = "Mid-level"
-    elif total_experience_years < 9:
-        seniority_level = "Senior"
-    else:
-        seniority_level = "Lead / Principal"
-
     return DetailedResumeAnalysis(
         sections=resume_sections,
         all_extracted_skills=all_extracted_skills,
-        total_experience_years=round(total_experience_years, 1),
-        seniority_level=seniority_level
+        total_experience_years=canonical_experience.estimated_years,
+        seniority_level=canonical_experience.seniority_level,
     )
 
 

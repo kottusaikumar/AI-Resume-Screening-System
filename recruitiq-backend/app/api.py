@@ -189,11 +189,12 @@ def _startup():
 @app.get("/api/health")
 def health():
     database_ok = storage.check_database()
-    return {
+    payload = {
         "status": "ok" if database_ok else "degraded",
         "version": "3.0.0",
         "database": "ok" if database_ok else "unavailable",
     }
+    return JSONResponse(payload, status_code=200 if database_ok else 503)
 
 
 @app.post("/api/auth/login", response_model=LoginResponse)
@@ -418,6 +419,11 @@ def _run_screening(
         confidence=confidence,
         report_id=report_id,
         processing_time_seconds=processing_time,
+        model_name=(
+            "MiniLM-L6 Hybrid Scorer"
+            if str(scores.get("dense_method", "")).startswith("neural")
+            else "Classical LSA Hybrid Scorer"
+        ),
     )
 
     if save_to_history:
@@ -465,11 +471,17 @@ async def _extract_uploaded_resume_text(
         # Keep both off the async event loop so other API requests stay responsive.
         # The public showcase delegates scanned-PDF OCR to the browser so a
         # single scan cannot exhaust the free Render instance's memory.
-        return await run_in_threadpool(
+        extracted_text = await run_in_threadpool(
             extract_text,
             tmp_path,
             enable_pdf_ocr=not config.SHOWCASE_MODE,
         )
+        if len(extracted_text) > config.MAX_TEXT_FIELD_CHARS:
+            raise UnsafeUploadError(
+                f"Extracted resume text is too long "
+                f"(max {config.MAX_TEXT_FIELD_CHARS:,} characters)."
+            )
+        return extracted_text
     finally:
         try:
             os.unlink(tmp_path)
@@ -691,6 +703,7 @@ async def analyze_bulk(
     mandatory_skills: str = Form(default=""),
     blind_mode: bool = Form(default=config.BLIND_SCREENING_DEFAULT),
     save_to_history: bool = Form(default=False),
+    browser_extracted_texts: str = Form(default=""),
     user: CurrentUser = Depends(require_recruiter),
 ):
     """
@@ -723,11 +736,28 @@ async def analyze_bulk(
             status_code=413,
             detail=f"Bulk upload is too large (max {config.MAX_BULK_TOTAL_MB}MB total).",
         )
+    try:
+        supplied_texts = json.loads(browser_extracted_texts) if browser_extracted_texts else []
+        if not isinstance(supplied_texts, list) or any(
+            item is not None and not isinstance(item, str) for item in supplied_texts
+        ):
+            raise ValueError
+    except (json.JSONDecodeError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Browser OCR text list is invalid.")
+    if supplied_texts and len(supplied_texts) != len(resumes):
+        raise HTTPException(
+            status_code=400,
+            detail="Browser OCR text must correspond to each uploaded resume.",
+        )
+    if any(len(item or "") > config.MAX_TEXT_FIELD_CHARS for item in supplied_texts):
+        raise HTTPException(status_code=413, detail="Browser OCR resume text is too long.")
+    if sum(len(item or "") for item in supplied_texts) > config.MAX_BULK_JD_TOTAL_CHARS:
+        raise HTTPException(status_code=413, detail="Combined browser OCR text is too long.")
 
     results: List[ScreeningResponse] = []
     failed: List[str] = []
 
-    for resume in resumes:
+    for resume_index, resume in enumerate(resumes):
         start_time = time.monotonic()
         if not resume.filename:
             failed.append("(unnamed file)")
@@ -738,7 +768,13 @@ async def analyze_bulk(
             failed.append(f"{resume.filename} (unsupported file type)")
             continue
         try:
-            resume_text = await _extract_uploaded_resume_text(resume, ext)
+            resume_text = await _extract_uploaded_resume_text(
+                resume,
+                ext,
+                browser_extracted_text=(
+                    supplied_texts[resume_index] or "" if supplied_texts else ""
+                ),
+            )
         except (UnsupportedFileTypeError, UnsafeUploadError, RuntimeError):
             failed.append(f"{resume.filename} (could not be read)")
             continue
@@ -812,6 +848,7 @@ async def analyze_against_roles(
     roles_json: str = Form(...),
     blind_mode: bool = Form(default=config.BLIND_SCREENING_DEFAULT),
     save_to_history: bool = Form(default=False),
+    browser_extracted_text: str = Form(default=""),
     user: CurrentUser = Depends(require_recruiter),
 ):
     """Compare one resume with several named job descriptions and rank the roles."""
@@ -858,7 +895,11 @@ async def analyze_against_roles(
             detail=f"Unsupported file type '{ext}'. Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
         )
     try:
-        resume_text = await _extract_uploaded_resume_text(resume, ext)
+        resume_text = await _extract_uploaded_resume_text(
+            resume,
+            ext,
+            browser_extracted_text=browser_extracted_text,
+        )
     except (UnsupportedFileTypeError, UnsafeUploadError, RuntimeError) as error:
         raise HTTPException(status_code=400, detail=str(error))
     if not resume_text.strip():

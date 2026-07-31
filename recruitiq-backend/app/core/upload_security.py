@@ -3,6 +3,9 @@
 import io
 import zipfile
 
+MAX_DOCX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
+MAX_DOCX_COMPRESSION_RATIO = 100
+
 
 class UnsafeUploadError(ValueError):
     pass
@@ -26,7 +29,10 @@ def validate_file_signature(data: bytes, extension: str) -> None:
                 if len(names) > 10_000:
                     raise UnsafeUploadError("The DOCX archive contains too many entries.")
                 uncompressed = sum(item.file_size for item in archive.infolist())
-                if uncompressed > max(len(data) * 100, 100 * 1024 * 1024):
+                if (
+                    uncompressed > MAX_DOCX_UNCOMPRESSED_BYTES
+                    or uncompressed > len(data) * MAX_DOCX_COMPRESSION_RATIO
+                ):
                     raise UnsafeUploadError("The DOCX archive expands beyond the safety limit.")
         except zipfile.BadZipFile as exc:
             raise UnsafeUploadError("The file content is not a valid DOCX document.") from exc

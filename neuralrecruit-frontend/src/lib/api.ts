@@ -91,6 +91,7 @@ export interface ScreeningResult {
   match_percentage: number;
   alignment_index: number;
   dense_score: number;
+  dense_method: string;
   bm25_score: number;
   tfidf_score: number;
   keyword_coverage: number;
@@ -371,6 +372,7 @@ export async function analyzeCandidatePool(
   files: File[],
   jobDescription: string,
   mandatorySkills = "",
+  browserExtractedTexts: Array<string | undefined> = [],
 ): Promise<CandidatePoolResponse> {
   const form = new FormData();
   files.forEach((file) => form.append("resumes", file));
@@ -378,10 +380,16 @@ export async function analyzeCandidatePool(
   form.append("mandatory_skills", mandatorySkills);
   form.append("blind_mode", "true");
   form.append("save_to_history", "false");
+  if (browserExtractedTexts.some((text) => text?.trim())) {
+    form.append(
+      "browser_extracted_texts",
+      JSON.stringify(browserExtractedTexts.map((text) => text?.trim() || null)),
+    );
+  }
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/analyze/bulk`, {
+    res = await fetchWithRetry(`${API_BASE}/api/analyze/bulk`, {
       method: "POST",
       headers: authHeaders(),
       body: form,
@@ -405,16 +413,20 @@ export async function analyzeCandidatePool(
 export async function analyzeRolePortfolio(
   file: File,
   roles: RoleComparisonInput[],
+  browserExtractedText?: string,
 ): Promise<RolePortfolioResponse> {
   const form = new FormData();
   form.append("resume", file);
   form.append("roles_json", JSON.stringify(roles));
   form.append("blind_mode", "true");
   form.append("save_to_history", "false");
+  if (browserExtractedText?.trim()) {
+    form.append("browser_extracted_text", browserExtractedText.trim());
+  }
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/analyze/roles`, {
+    res = await fetchWithRetry(`${API_BASE}/api/analyze/roles`, {
       method: "POST",
       headers: authHeaders(),
       body: form,

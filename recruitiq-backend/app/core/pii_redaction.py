@@ -38,6 +38,15 @@ POSTAL_ADDRESS_RE = re.compile(
     re.I,
 )
 ZIP_RE = re.compile(r"\b\d{5,6}(-\d{4})?\b")
+LOCATION_LABEL_RE = re.compile(
+    r"(?im)^\s*(?:location|address|based\s+in)\s*:\s*[^\n]{2,100}$"
+)
+_HEADER_WORD_RE = re.compile(r"^[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}$")
+_NOT_A_NAME = {
+    "summary", "profile", "objective", "experience", "education", "skills",
+    "projects", "certifications", "software engineer", "data analyst",
+    "data scientist", "machine learning engineer", "full stack developer",
+}
 
 # NER labels that carry demographic/geographic signal we want to blind.
 _REDACT_ENT_LABELS = {"PERSON", "GPE", "LOC", "NORP", "FAC"}
@@ -62,6 +71,24 @@ def redact_pii(text: str, max_chars_for_ner: int = 20_000) -> str:
     text = EMAIL_RE.sub("[EMAIL]", text)
     text = POSTAL_ADDRESS_RE.sub("[ADDRESS]", text)
     text = PHONE_RE.sub("[PHONE]", text)
+    text = LOCATION_LABEL_RE.sub("[LOCATION]", text)
+
+    # The lightweight production profile does not load a statistical NER
+    # model. Conservatively remove a name-like document header so its most
+    # common PII field is still blinded without guessing at arbitrary body
+    # text. The original line structure is preserved for section parsing.
+    lines = text.splitlines()
+    for index, line in enumerate(lines[:5]):
+        candidate = line.strip()
+        lowered = candidate.lower()
+        if not candidate:
+            continue
+        if lowered in _NOT_A_NAME or any(marker in lowered for marker in ("@", "http", "linkedin")):
+            continue
+        if _HEADER_WORD_RE.fullmatch(candidate):
+            lines[index] = "[REDACTED]"
+        break
+    text = "\n".join(lines)
 
     # 2. spaCy NER for names / locations / nationalities / facilities.
     #    Guard against pathologically long documents — NER is O(n) but we

@@ -125,7 +125,7 @@ class ScreeningResponse(BaseModel):
     funnel: List[FunnelStage] = []
     confidence: float = 0.0
     report_id: str = ""
-    model_name: str = "MiniLM-L6 Hybrid Scorer"
+    model_name: str = "Hybrid Evidence Scorer"
     processing_time_seconds: float = 0.0
     decision_status: str = "Human review required"
     advisory_only: bool = True

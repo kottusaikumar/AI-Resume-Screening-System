@@ -12,6 +12,11 @@ import threading
 
 import fitz  # PyMuPDF
 import docx
+from docx.document import Document as DocxDocument
+from docx.table import Table, _Cell
+from docx.text.paragraph import Paragraph
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
 
 from app.core import config
 
@@ -103,10 +108,51 @@ def extract_text_from_pdf(path: str, enable_ocr: bool | None = None) -> str:
     return "\n".join(text)
 
 
+def _iter_docx_blocks(parent: DocxDocument | _Cell):
+    """Yield paragraphs and tables in their actual document order."""
+    container = parent.element.body if isinstance(parent, DocxDocument) else parent._tc
+    for child in container.iterchildren():
+        if isinstance(child, CT_P):
+            yield Paragraph(child, parent)
+        elif isinstance(child, CT_Tbl):
+            yield Table(child, parent)
+
+
+def _docx_table_text(table: Table) -> list[str]:
+    lines: list[str] = []
+    seen_cells: set[int] = set()
+    for row in table.rows:
+        row_parts: list[str] = []
+        for cell in row.cells:
+            # Merged cells can appear more than once in python-docx's row view.
+            cell_identity = id(cell._tc)
+            if cell_identity in seen_cells:
+                continue
+            seen_cells.add(cell_identity)
+            cell_text = "\n".join(
+                block.text.strip()
+                if isinstance(block, Paragraph)
+                else "\n".join(_docx_table_text(block))
+                for block in _iter_docx_blocks(cell)
+            ).strip()
+            if cell_text:
+                row_parts.append(cell_text)
+        if row_parts:
+            lines.append(" | ".join(row_parts))
+    return lines
+
+
 def extract_text_from_docx(path: str) -> str:
     try:
         doc = docx.Document(path)
-        return "\n".join(para.text for para in doc.paragraphs)
+        lines: list[str] = []
+        for block in _iter_docx_blocks(doc):
+            if isinstance(block, Paragraph):
+                if block.text.strip():
+                    lines.append(block.text)
+            else:
+                lines.extend(_docx_table_text(block))
+        return "\n".join(lines)
     except Exception as e:
         raise RuntimeError(f"Failed to read DOCX: {e}") from e
 

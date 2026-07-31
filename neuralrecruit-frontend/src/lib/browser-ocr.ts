@@ -39,7 +39,6 @@ export async function extractScannedPdfText(
 
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
-    isEvalSupported: false,
   });
   const pdfDocument = await loadingTask.promise;
 

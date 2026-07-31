@@ -7,7 +7,11 @@ from typing import Any
 
 import numpy as np
 
-_MAX_ITEMS = 512
+# BM25 cache entries retain tokenised resume/JD corpora and several NumPy
+# arrays. A count of 512 can consume hundreds of MB on a public worker even
+# when every individual upload is valid. Keep the hot cache deliberately
+# small; misses are cheap compared with restarting the service.
+_MAX_ITEMS = 32
 _lock = threading.RLock()
 _cache: OrderedDict[str, Any] = OrderedDict()
 

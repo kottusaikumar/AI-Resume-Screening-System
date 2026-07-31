@@ -51,9 +51,9 @@ def lsa_score(original_resume: str, original_jd: str, n_components: int = 40) ->
     Latent Semantic Analysis similarity between a resume and a JD, computed
     with only TF-IDF + truncated SVD (no neural network).
 
-    Returns a value in [0, 1] (raw cosine in [-1, 1] is rescaled like the
-    neural dense score, so the two are on the same footing and can be
-    swapped/blended without changing the rest of the scoring pipeline).
+    Returns a value in [0, 1]. Negative similarity is treated as no alignment;
+    orthogonal documents remain at zero rather than receiving an artificial
+    50% baseline.
     """
     resume_sents = _split_sentences(original_resume)
     jd_sents = _split_sentences(original_jd)
@@ -93,4 +93,4 @@ def lsa_score(original_resume: str, original_jd: str, n_components: int = 40) ->
         return 0.0
 
     raw_cosine = float(np.dot(resume_vec, jd_vec) / (norm_r * norm_j))
-    return float(np.clip((raw_cosine + 1) / 2, 0.0, 1.0))
+    return float(np.clip(raw_cosine, 0.0, 1.0))

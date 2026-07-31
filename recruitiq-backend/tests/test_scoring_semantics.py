@@ -2,6 +2,7 @@ import numpy as np
 
 from app.core.presentation import compute_match_label
 from app.core.scoring import DEFAULT_WEIGHTS, _cosine_dense, calculate_match_score
+from app.core.lsa_similarity import lsa_score
 from app.models.schemas import (
     DetailedResumeAnalysis,
     ResumeQuality,
@@ -15,6 +16,19 @@ def test_negative_dense_similarity_is_not_inflated_to_partial_match():
     opposite_job = np.array([-1.0, 0.0], dtype=float)
 
     assert _cosine_dense(resume, opposite_job) == 0.0
+
+
+def test_unrelated_lsa_documents_do_not_receive_half_credit():
+    resume = (
+        "Built Python APIs. Deployed FastAPI services. Managed PostgreSQL databases. "
+        "Tested backend systems."
+    )
+    unrelated_job = (
+        "Created brand logos. Designed print typography. Illustrated marketing posters. "
+        "Edited Adobe Photoshop assets."
+    )
+
+    assert lsa_score(resume, unrelated_job) < 0.05
 
 
 def test_production_weights_exclude_redundant_and_non_fit_signals():

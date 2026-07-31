@@ -3,6 +3,7 @@ import datetime
 import pytest
 
 from app.core.resume_analyzer import (
+    analyze_detailed_resume,
     _extract_experience_intervals,
     _merged_month_count,
     estimate_experience,
@@ -185,3 +186,29 @@ Cloud Internship Training (6 months)
 
     assert result.estimated_years == 3.0
     assert result.seniority_level == "Mid-level"
+
+
+def test_detailed_analysis_uses_the_canonical_experience_timeline():
+    resume = """
+INTERNSHIP EXPERIENCE
+AI/ML Intern | Vajra.aiNOV 2024 - Feb 2025
+Built Python and FastAPI services for machine-learning workflows.
+
+SKILLS
+Python, FastAPI, Machine Learning
+
+EDUCATION
+Bachelor of Technology
+"""
+
+    canonical = estimate_experience(resume)
+    detailed = analyze_detailed_resume(resume)
+
+    assert canonical.estimated_years == 0.3
+    assert detailed.total_experience_years == canonical.estimated_years
+    assert detailed.seniority_level == canonical.seniority_level
+    python_context = next(
+        item for item in detailed.all_extracted_skills
+        if item.skill.lower() == "python" and item.section == "experience"
+    )
+    assert python_context.duration_months == 4

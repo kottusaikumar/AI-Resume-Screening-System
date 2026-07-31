@@ -1,18 +1,23 @@
 from pathlib import Path
+import io
 import sqlite3
+import zipfile
 
 import fitz
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import app
+from app.api import app, limiter
 from app.core import config, storage
 from app.core.auth import ensure_bootstrap_admin
+from app.core import upload_security
 from app.core.upload_security import UnsafeUploadError, validate_file_signature
+from app.core.pii_redaction import redact_pii
 
 
 @pytest.fixture()
 def client(tmp_path: Path):
+    limiter.reset()
     config.DATA_DIR = tmp_path
     config.DATABASE_PATH = tmp_path / "test.db"
     config.AUTH_SECRET = "test-secret-that-is-long-enough-for-hs256-signing"
@@ -81,6 +86,28 @@ def test_upload_signature_validation():
         validate_file_signature(b"not a pdf", ".pdf")
     with pytest.raises(UnsafeUploadError):
         validate_file_signature(b"binary\x00data", ".txt")
+
+
+def test_docx_expansion_requires_absolute_and_ratio_limits(monkeypatch):
+    archive_bytes = io.BytesIO()
+    with zipfile.ZipFile(archive_bytes, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", "<Types />")
+        archive.writestr("word/document.xml", "A" * 200)
+    monkeypatch.setattr(upload_security, "MAX_DOCX_UNCOMPRESSED_BYTES", 100)
+
+    with pytest.raises(UnsafeUploadError, match="expands beyond"):
+        validate_file_signature(archive_bytes.getvalue(), ".docx")
+
+
+def test_lightweight_blind_screening_redacts_name_and_labeled_location():
+    redacted = redact_pii(
+        "Kottu Sai Kumar\nLocation: Hyderabad, India\nSUMMARY\nBackend engineer"
+    )
+
+    assert "Kottu Sai Kumar" not in redacted
+    assert "Hyderabad" not in redacted
+    assert "[REDACTED]" in redacted
+    assert "[LOCATION]" in redacted
 
 
 def test_resume_review_does_not_require_or_invent_job_match(client: TestClient):
@@ -172,6 +199,69 @@ def test_multi_role_comparison_requires_valid_role_list(client: TestClient):
     )
     assert one_role.status_code == 400
     assert one_role.json()["detail"] == "Add at least two job descriptions."
+
+
+def test_multi_role_comparison_accepts_browser_ocr(client: TestClient):
+    headers = _login(client)
+    document = fitz.open()
+    document.new_page()
+    pdf_bytes = document.tobytes()
+    document.close()
+    roles = (
+        '[{"title":"Backend Engineer",'
+        '"description":"Build production Python FastAPI backend services and SQL APIs."},'
+        '{"title":"Data Engineer",'
+        '"description":"Build Python SQL data pipelines and production ETL systems."}]'
+    )
+    response = client.post(
+        "/api/analyze/roles",
+        headers=headers,
+        files={"resume": ("scanned.pdf", pdf_bytes, "application/pdf")},
+        data={
+            "roles_json": roles,
+            "browser_extracted_text": (
+                "SUMMARY\nPython backend engineer\nSKILLS\nPython FastAPI SQL\n"
+                "EXPERIENCE\nBackend Engineer\nJan 2024 - Dec 2025\n"
+                "Built production Python APIs and SQL services."
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["total_roles"] == 2
+    assert all(
+        item["result"]["model_name"] == "Classical LSA Hybrid Scorer"
+        for item in response.json()["roles"]
+    )
+
+
+def test_native_resume_text_limit_is_enforced(client: TestClient, monkeypatch):
+    monkeypatch.setattr(config, "MAX_TEXT_FIELD_CHARS", 40)
+    headers = _login(client)
+
+    response = client.post(
+        "/api/review-resume",
+        headers=headers,
+        files={
+            "resume": (
+                "oversized.txt",
+                b"SUMMARY\n" + (b"A" * 100),
+                "text/plain",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+    assert "too long" in response.json()["detail"].lower()
+
+
+def test_health_returns_503_when_database_is_unavailable(client: TestClient, monkeypatch):
+    monkeypatch.setattr(storage, "check_database", lambda: False)
+
+    response = client.get("/api/health")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "degraded"
 
 
 def test_legacy_database_migrates_without_losing_scans(tmp_path: Path):

@@ -15,5 +15,5 @@ slowapi==0.1.10
 python-dotenv==1.2.2
 PyJWT==2.13.0
 pwdlib[argon2]==0.3.0
-rapidocr==3.9.1
-onnxruntime==1.27.0
+# Scanned PDFs use the browser OCR path in the free deployment. Keeping the
+# ONNX OCR runtime out of this image avoids a large idle-memory penalty.

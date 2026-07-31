@@ -30,6 +30,8 @@ import {
 } from "@/lib/api";
 import { downloadCsv } from "@/lib/csv";
 import { useExport } from "@/lib/scanner-context";
+import { useAuth } from "@/lib/auth-context";
+import { extractScannedPdfText } from "@/lib/browser-ocr";
 
 export const Route = createFileRoute("/_layout/compare")({
   head: () => ({ meta: [{ title: "Match Lab — NeuralRecruit" }] }),
@@ -106,6 +108,7 @@ function formatSize(bytes: number) {
 
 function MatchLabPage() {
   const { setExportConfig } = useExport();
+  const { ensureAccess } = useAuth();
   const [mode, setMode] = useState<CompareMode>("candidate-pool");
   const [runState, setRunState] = useState<RunState>("setup");
   const [candidateFiles, setCandidateFiles] = useState<File[]>([]);
@@ -117,6 +120,7 @@ function MatchLabPage() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState("Preparing secure comparison…");
 
   const selected = comparison?.items[selectedIndex] ?? null;
   const meta = MODE_META[mode];
@@ -210,12 +214,28 @@ function MatchLabPage() {
     setRunState("running");
     setComparison(null);
     setError(null);
+    setProcessingMessage("Connecting to the private analysis workspace…");
     try {
+      const hasAccess = await ensureAccess();
+      if (!hasAccess) {
+        throw new ApiError("The comparison workspace is temporarily unavailable.");
+      }
+
       if (mode === "candidate-pool") {
+        const browserExtractedTexts: Array<string | undefined> = [];
+        for (let index = 0; index < candidateFiles.length; index += 1) {
+          const candidate = candidateFiles[index];
+          const extracted = await extractScannedPdfText(candidate, ({ message }) => {
+            setProcessingMessage(`Candidate ${index + 1} of ${candidateFiles.length}: ${message}`);
+          });
+          browserExtractedTexts.push(extracted);
+        }
+        setProcessingMessage("Analysing and ranking candidate evidence…");
         const response = await analyzeCandidatePool(
           candidateFiles,
           jobDescription,
           mandatorySkills,
+          browserExtractedTexts,
         );
         setComparison({
           mode,
@@ -231,6 +251,10 @@ function MatchLabPage() {
           })),
         });
       } else if (resumeFile) {
+        const browserExtractedText = await extractScannedPdfText(resumeFile, ({ message }) =>
+          setProcessingMessage(message),
+        );
+        setProcessingMessage("Comparing the resume with each role…");
         const response = await analyzeRolePortfolio(
           resumeFile,
           validRoles.map(({ title, description, mandatory_skills }) => ({
@@ -238,6 +262,7 @@ function MatchLabPage() {
             description,
             mandatory_skills,
           })),
+          browserExtractedText,
         );
         setComparison({
           mode,
@@ -344,6 +369,7 @@ function MatchLabPage() {
         <ProcessingPanel
           mode={mode}
           count={mode === "candidate-pool" ? candidateFiles.length : validRoles.length}
+          message={processingMessage}
         />
       ) : runState === "results" && comparison ? (
         <ResultsWorkspace
@@ -671,7 +697,15 @@ function ReadinessRow({ ready, label }: { ready: boolean; label: string }) {
   );
 }
 
-function ProcessingPanel({ mode, count }: { mode: CompareMode; count: number }) {
+function ProcessingPanel({
+  mode,
+  count,
+  message,
+}: {
+  mode: CompareMode;
+  count: number;
+  message: string;
+}) {
   const labels =
     mode === "candidate-pool"
       ? ["Extracting candidate evidence", "Applying one consistent rubric", "Building shortlist"]
@@ -687,9 +721,7 @@ function ProcessingPanel({ mode, count }: { mode: CompareMode; count: number }) 
         </div>
         <div className="mt-6 font-mono-label text-primary-glow">Comparison in progress</div>
         <h2 className="mt-2 text-2xl font-semibold">Evaluating {count} matches</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Local scoring may take a moment on the first run while models warm up.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
         <div className="mt-7 space-y-2 text-left">
           {labels.map((label, index) => (
             <div

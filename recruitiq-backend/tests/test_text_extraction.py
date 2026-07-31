@@ -1,5 +1,6 @@
 import fitz
 import pytest
+import docx
 
 from app.core import config
 from app.core import text_extraction
@@ -68,3 +69,20 @@ def test_scanned_pdf_page_limit_is_enforced(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="too many scanned pages"):
         text_extraction.extract_text_from_pdf(str(pdf_path))
+
+
+def test_docx_extraction_includes_table_cells(tmp_path):
+    path = tmp_path / "table-resume.docx"
+    document = docx.Document()
+    document.add_paragraph("SUMMARY")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "SKILLS"
+    table.cell(0, 1).text = "Python, FastAPI"
+    table.cell(1, 0).text = "EXPERIENCE"
+    table.cell(1, 1).text = "Backend Engineer | 2024 - 2025"
+    document.save(path)
+
+    extracted = text_extraction.extract_text_from_docx(str(path))
+
+    assert "Python, FastAPI" in extracted
+    assert "Backend Engineer" in extracted
