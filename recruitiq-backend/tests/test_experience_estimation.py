@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from app.core.resume_analyzer import (
     _extract_experience_intervals,
     _merged_month_count,
@@ -97,4 +99,89 @@ Python, Linux
     result = estimate_experience(resume)
 
     assert result.estimated_years == 2.0
+    assert result.seniority_level == "Mid-level"
+
+
+def test_attached_company_date_and_internship_experience_heading():
+    resume = """
+Internship Experience
+Data Science Intern | Vajra.aiNOV 2024 - Feb 2025
+Built a full-stack AI application.
+
+Machine Learning Project | AUG 2024 - OCT 2024
+Developed regression models.
+
+Personal Projects
+Document assistant
+
+Certifications & Additional Training
+Data Science with AI Internship (6 months) - Vajra.ai
+Aug 2024 - Feb 2025
+"""
+
+    result = estimate_experience(resume)
+
+    assert result.estimated_years == 0.5
+    assert result.seniority_level == "Entry-level"
+
+
+@pytest.mark.parametrize(
+    ("date_range", "expected_months"),
+    [
+        ("Nov 2024 - Feb 2025", 4),
+        ("November 2024 to February 2025", 4),
+        ("NOV2024-FEB2025", 4),
+        ("11/2024 - 02/2025", 4),
+        ("11.2024 - 02.2025", 4),
+        ("2024-11 to 2025-02", 4),
+        ("Nov '24 - Feb '25", 4),
+        ("Nov 2024 - Current", 15),
+    ],
+)
+def test_common_month_range_formats(date_range, expected_months):
+    intervals = _extract_experience_intervals(
+        f"Software Engineer\n{date_range}",
+        today=datetime.date(2026, 1, 15),
+    )
+
+    assert _merged_month_count(intervals) == expected_months
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "Internship Experience",
+        "Relevant Experience",
+        "Professional Background",
+        "Employment History",
+    ],
+)
+def test_common_professional_section_headings(heading):
+    resume = f"""
+{heading}
+Software Engineer
+Jan 2024 - Dec 2024
+
+EDUCATION
+Bachelor of Technology
+"""
+
+    result = estimate_experience(resume)
+
+    assert result.estimated_years == 1.0
+
+
+def test_unrelated_training_duration_does_not_override_employment_dates():
+    resume = """
+WORK EXPERIENCE
+Data Analyst
+Jan 2020 - Dec 2022
+
+CERTIFICATIONS
+Cloud Internship Training (6 months)
+"""
+
+    result = estimate_experience(resume)
+
+    assert result.estimated_years == 3.0
     assert result.seniority_level == "Mid-level"

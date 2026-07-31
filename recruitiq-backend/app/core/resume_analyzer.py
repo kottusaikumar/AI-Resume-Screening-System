@@ -169,8 +169,12 @@ def _is_education_line(line: str) -> bool:
 
 
 _EXPERIENCE_HEADER_RE = re.compile(
-    r"^\s*(?:(?:professional|work)\s+)?"
-    r"(?:experience|employment|work\s+history|career\s+history|internships?)"
+    r"^\s*(?:"
+    r"experience|professional\s+experience|work\s+experience|"
+    r"relevant\s+experience|career\s+experience|internship\s+experience|"
+    r"employment(?:\s+history)?|work\s+history|career\s+history|"
+    r"professional\s+background|internships?"
+    r")"
     r"(?:\s*(?:&|and|/)\s*internships?)?\s*:?\s*$",
     re.I,
 )
@@ -204,19 +208,27 @@ _MONTH_WORD = (
     r"jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|"
     r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
 )
+_YEAR_TOKEN = r"(?:20\d{2}|19\d{2}|['\u2019]?\d{2})"
 _DATE_SEPARATOR = r"(?:-|\u2013|\u2014|\u2212|\bto\b)"
 _PRESENT_WORD = r"(?:present|current|now|ongoing|till\s+date|to\s+date)"
 _MONTH_RANGE_RE = re.compile(
     rf"\b(?P<start_month>{_MONTH_WORD})\.?[\s,/-]+"
-    rf"(?P<start_year>20\d{{2}}|19\d{{2}})\s*{_DATE_SEPARATOR}\s*"
+    rf"(?P<start_year>{_YEAR_TOKEN})\s*{_DATE_SEPARATOR}\s*"
     rf"(?:(?P<end_month>{_MONTH_WORD})\.?[\s,/-]+"
-    rf"(?P<end_year>20\d{{2}}|19\d{{2}})|(?P<present>{_PRESENT_WORD}))\b",
+    rf"(?P<end_year>{_YEAR_TOKEN})|(?P<present>{_PRESENT_WORD}))\b",
     re.I,
 )
 _NUMERIC_MONTH_RANGE_RE = re.compile(
-    rf"\b(?P<start_month>0?[1-9]|1[0-2])[/.-](?P<start_year>20\d{{2}}|19\d{{2}})"
+    rf"\b(?P<start_month>0?[1-9]|1[0-2])[/.-](?P<start_year>{_YEAR_TOKEN})"
     rf"\s*{_DATE_SEPARATOR}\s*"
-    rf"(?:(?P<end_month>0?[1-9]|1[0-2])[/.-](?P<end_year>20\d{{2}}|19\d{{2}})"
+    rf"(?:(?P<end_month>0?[1-9]|1[0-2])[/.-](?P<end_year>{_YEAR_TOKEN})"
+    rf"|(?P<present>{_PRESENT_WORD}))\b",
+    re.I,
+)
+_YEAR_FIRST_MONTH_RANGE_RE = re.compile(
+    rf"\b(?P<start_year>20\d{{2}}|19\d{{2}})[/.-](?P<start_month>0?[1-9]|1[0-2])"
+    rf"\s*{_DATE_SEPARATOR}\s*"
+    rf"(?:(?P<end_year>20\d{{2}}|19\d{{2}})[/.-](?P<end_month>0?[1-9]|1[0-2])"
     rf"|(?P<present>{_PRESENT_WORD}))\b",
     re.I,
 )
@@ -225,6 +237,38 @@ _EXPERIENCE_YEAR_RANGE_RE = re.compile(
     rf"(?:(?P<end_year>20\d{{2}}|19\d{{2}})|(?P<present>{_PRESENT_WORD}))\b",
     re.I,
 )
+_STATED_DURATION_AFTER_CONTEXT_RE = re.compile(
+    r"\b(?:internship|employment|experience|work(?:\s+experience)?|professional\s+experience)"
+    r"\b[^\n]{0,80}?\b(?P<value>\d+(?:\.\d+)?)\s*"
+    r"(?P<unit>months?|mos?|years?|yrs?)\b",
+    re.I,
+)
+_STATED_DURATION_BEFORE_CONTEXT_RE = re.compile(
+    r"\b(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>months?|mos?|years?|yrs?)"
+    r"\b[^\n]{0,40}?\b(?:of\s+)?(?:internship|employment|experience|work|professional)\b",
+    re.I,
+)
+
+
+def _normalize_extracted_date_text(text: str) -> str:
+    """
+    Repair high-confidence spacing loss around month-year dates.
+
+    PDF text layers often concatenate visually separate spans, for example
+    ``Vajra.aiNOV 2024`` or ``NOV2024``. Only insert spaces when a recognized
+    month token is immediately followed by a plausible year, which avoids
+    changing ordinary words.
+    """
+    attached_month = re.compile(
+        rf"(?<=[A-Za-z0-9.])(?=(?:{_MONTH_WORD})\.?[\s,/-]*{_YEAR_TOKEN}\b)",
+        re.I,
+    )
+    missing_month_year_space = re.compile(
+        rf"(?P<month>{_MONTH_WORD})\.?(?={_YEAR_TOKEN}\b)",
+        re.I,
+    )
+    normalized = attached_month.sub(" ", text)
+    return missing_month_year_space.sub(r"\g<month> ", normalized)
 
 
 def _extract_experience_scope(text: str) -> str:
@@ -259,6 +303,7 @@ def _extract_experience_scope(text: str) -> str:
     range_patterns = (
         _MONTH_RANGE_RE,
         _NUMERIC_MONTH_RANGE_RE,
+        _YEAR_FIRST_MONTH_RANGE_RE,
         _EXPERIENCE_YEAR_RANGE_RE,
     )
     for index, line in enumerate(lines):
@@ -290,8 +335,33 @@ def _month_number(value: str) -> int:
     }[value[:3].lower()]
 
 
+def _four_digit_year(value: str, current_year: int) -> int:
+    cleaned = value.strip("'’")
+    if len(cleaned) == 4:
+        return int(cleaned)
+    short_year = int(cleaned)
+    current_short_year = current_year % 100
+    return 2000 + short_year if short_year <= current_short_year + 1 else 1900 + short_year
+
+
 def _month_index(year: int, month: int) -> int:
     return year * 12 + month - 1
+
+
+def _extract_stated_experience_months(text: str) -> List[int]:
+    """Return explicit professional durations such as 'internship (6 months)'."""
+    durations: List[int] = []
+    for pattern in (
+        _STATED_DURATION_AFTER_CONTEXT_RE,
+        _STATED_DURATION_BEFORE_CONTEXT_RE,
+    ):
+        for match in pattern.finditer(text):
+            value = float(match.group("value"))
+            unit = match.group("unit").lower()
+            months = round(value * 12) if unit.startswith(("year", "yr")) else round(value)
+            if 0 < months <= 600:
+                durations.append(months)
+    return durations
 
 
 def _extract_experience_intervals(
@@ -300,22 +370,27 @@ def _extract_experience_intervals(
 ) -> List[Tuple[int, int]]:
     """Extract half-open month intervals from work-history date ranges."""
     today = today or datetime.date.today()
+    experience_text = _normalize_extracted_date_text(experience_text)
     intervals: List[Tuple[int, int]] = []
     occupied_spans: List[Tuple[int, int]] = []
 
     def overlaps_existing(start: int, end: int) -> bool:
         return any(start < used_end and end > used_start for used_start, used_end in occupied_spans)
 
-    for pattern in (_MONTH_RANGE_RE, _NUMERIC_MONTH_RANGE_RE):
+    for pattern in (
+        _MONTH_RANGE_RE,
+        _NUMERIC_MONTH_RANGE_RE,
+        _YEAR_FIRST_MONTH_RANGE_RE,
+    ):
         for match in pattern.finditer(experience_text):
             if overlaps_existing(*match.span()):
                 continue
-            start_year = int(match.group("start_year"))
+            start_year = _four_digit_year(match.group("start_year"), today.year)
             start_month = _month_number(match.group("start_month"))
             if match.group("present"):
                 end_year, end_month = today.year, today.month
             else:
-                end_year = int(match.group("end_year"))
+                end_year = _four_digit_year(match.group("end_year"), today.year)
                 end_month = _month_number(match.group("end_month"))
 
             if start_year > today.year + 1 or end_year > today.year + 1:
@@ -373,10 +448,24 @@ def estimate_experience(text: str) -> ExperienceInfo:
     roles are merged so concurrent employment is not double-counted. Dates in
     education, certification, project, and other non-work sections are ignored.
     """
-    experience_text = _extract_experience_scope(text)
+    normalized_text = _normalize_extracted_date_text(text)
+    experience_text = _extract_experience_scope(normalized_text)
     total_months = _merged_month_count(
         _extract_experience_intervals(experience_text)
     )
+    stated_durations = _extract_stated_experience_months(normalized_text)
+    corroborating_durations = [
+        months for months in stated_durations
+        if abs(months - total_months) <= 1
+    ]
+    if corroborating_durations:
+        # Month/year labels cannot reveal the exact start and end days. Prefer
+        # an explicit stated duration when it agrees within that one-month
+        # precision window.
+        total_months = min(
+            corroborating_durations,
+            key=lambda months: abs(months - total_months),
+        )
     if total_months == 0:
         return ExperienceInfo(estimated_years=0.0, seniority_level="Entry-level")
 
