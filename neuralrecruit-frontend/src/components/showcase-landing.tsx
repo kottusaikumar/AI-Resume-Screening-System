@@ -15,6 +15,7 @@ import {
   Sparkles,
   TestTube2,
 } from "lucide-react";
+import { GITHUB_ISSUES_URL, GITHUB_URL } from "@/lib/site-metadata";
 
 const WORKFLOW = [
   {
@@ -129,6 +130,7 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
         <nav className="landing-nav-links" aria-label="Primary navigation">
           <a href="#workflow">How it works</a>
           <a href="#safeguards">Safeguards</a>
+          <a href="/about">About</a>
         </nav>
         <button className="landing-signin-link" type="button" onClick={onEnter}>
           Enter showcase
@@ -147,8 +149,9 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
             <span>Decide with evidence.</span>
           </h1>
           <p className="landing-hero-lede">
-            NeuralRecruit turns candidate resumes into structured, reviewable intelligence—then adds
-            job-description matching only when you need it. No LLM model API is required.
+            NeuralRecruit is a source-available web application for HR teams and technical
+            recruiters. It turns candidate resumes into structured, reviewable intelligence, then
+            adds job-description matching only when needed. No LLM model API is required.
           </p>
           <div className="landing-actions">
             <button type="button" className="landing-primary-cta" onClick={onEnter}>
@@ -456,9 +459,12 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
         </a>
         <p>Explainable resume intelligence with mandatory human review.</p>
         <div className="landing-footer-links">
+          <a href="/about">About</a>
           <a href="#roles">IT roles</a>
           <a href="#architecture">Architecture</a>
           <a href="#faq">FAQ</a>
+          <a href={GITHUB_URL}>Source</a>
+          <a href={GITHUB_ISSUES_URL}>Feedback</a>
           <button type="button" onClick={onEnter}>
             Open showcase
           </button>

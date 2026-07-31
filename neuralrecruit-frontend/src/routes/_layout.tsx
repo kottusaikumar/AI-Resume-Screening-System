@@ -3,9 +3,27 @@ import { Sidebar, TopBar } from "@/components/app-shell";
 import { ScannerProvider, ExportProvider } from "@/lib/scanner-context";
 import { ShowcaseLanding } from "@/components/showcase-landing";
 import { AuthProvider } from "@/lib/auth-context";
+import {
+  HOME_STRUCTURED_DATA,
+  OG_IMAGE_URL,
+  SITE_DESCRIPTION,
+  SITE_URL,
+} from "@/lib/site-metadata";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_layout")({
+  head: () => ({
+    meta: [
+      { title: "NeuralRecruit - Explainable Resume Intelligence" },
+      { name: "description", content: SITE_DESCRIPTION },
+      { property: "og:title", content: "NeuralRecruit - Explainable Resume Intelligence" },
+      { property: "og:description", content: SITE_DESCRIPTION },
+      { property: "og:url", content: `${SITE_URL}/` },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { "script:ld+json": HOME_STRUCTURED_DATA },
+    ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+  }),
   component: LayoutComponent,
 });
 

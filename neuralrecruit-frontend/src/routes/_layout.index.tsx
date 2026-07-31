@@ -37,16 +37,17 @@ import { downloadCsv } from "@/lib/csv";
 export const Route = createFileRoute("/_layout/")({
   head: () => ({
     meta: [
-      { title: "NeuralRecruit — Resume Match Decision Support" },
+      { title: "NeuralRecruit - Explainable Resume Intelligence" },
       {
         name: "description",
         content:
-          "Precision-engineered AI resume screening. Match candidates to job descriptions in seconds with deep skill analysis.",
+          "Source-available resume review and job-matching decision support for HR teams and technical recruiters, with explainable evidence and mandatory human review.",
       },
-      { property: "og:title", content: "NeuralRecruit — Resume Match Decision Support" },
+      { property: "og:title", content: "NeuralRecruit - Explainable Resume Intelligence" },
       {
         property: "og:description",
-        content: "Explainable, locally processed resume matching with mandatory human review.",
+        content:
+          "Review resumes, inspect candidate evidence, and compare job alignment without a paid or external LLM API.",
       },
     ],
   }),

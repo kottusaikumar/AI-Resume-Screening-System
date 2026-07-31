@@ -3,6 +3,7 @@
 **Explainable resume intelligence and job-matching decision support for technical hiring.**
 
 [Open the live application](https://neuralrecruit.vercel.app/) |
+[Project information](https://neuralrecruit.vercel.app/about) |
 [Backend health](https://neuralrecruit-api-kottu.onrender.com/api/health) |
 [View the GitHub repository](https://github.com/kottusaikumar/AI-Resume-Screening-System)
 

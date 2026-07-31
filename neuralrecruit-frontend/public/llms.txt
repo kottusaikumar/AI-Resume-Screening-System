@@ -1,0 +1,25 @@
+# NeuralRecruit
+
+> NeuralRecruit is a source-available web application for explainable resume intelligence and job-matching decision support in technical hiring. It organizes evidence for mandatory human review and does not make hiring decisions.
+
+## Key pages
+
+- [NeuralRecruit showcase](https://neuralrecruit.vercel.app/): Product overview, resume-review workflow, job-matching workflow, safeguards, supported IT roles, architecture, and frequently asked questions.
+- [About NeuralRecruit](https://neuralrecruit.vercel.app/about): Project purpose, implementation summary, responsible-use principles, source code, and feedback path.
+- [Source code](https://github.com/kottusaikumar/AI-Resume-Screening-System): Complete React, TypeScript, FastAPI, and deterministic NLP implementation.
+- [Sitemap](https://neuralrecruit.vercel.app/sitemap.xml): Canonical indexable pages.
+
+## Product capabilities
+
+- Resume-only review for ATS readability, structure, skills, experience evidence, and suitable IT role families.
+- Resume-to-job-description comparison using transparent lexical, semantic, skill, positional, experience, and quality signals.
+- Candidate ranking against one shared job description.
+- Role comparison for one resume.
+- CSV and PDF evidence exports.
+
+## Responsible-use constraints
+
+- Results are advisory evidence signals, not hiring decisions.
+- Human review is required before employment decisions.
+- Candidate documents are processed temporarily in the public showcase.
+- No paid or external LLM inference API is required.

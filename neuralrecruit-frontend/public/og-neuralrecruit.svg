@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061009"/>
+      <stop offset="0.6" stop-color="#050706"/>
+      <stop offset="1" stop-color="#0a1b0d"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fff68"/>
+      <stop offset="1" stop-color="#35e52d"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity=".04"/>
+    </pattern>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="1000" cy="120" r="210" fill="#38ff45" fill-opacity=".09" filter="url(#glow)"/>
+  <circle cx="80" cy="580" r="180" fill="#3f7cff" fill-opacity=".07" filter="url(#glow)"/>
+  <g transform="translate(72 66)">
+    <rect width="54" height="54" rx="15" fill="url(#lime)"/>
+    <circle cx="27" cy="27" r="14" fill="none" stroke="#061006" stroke-width="3"/>
+    <circle cx="27" cy="27" r="7" fill="none" stroke="#061006" stroke-width="3"/>
+    <path d="M27 8v7M46 27h-7M27 46v-7M8 27h7" stroke="#061006" stroke-width="3" stroke-linecap="round"/>
+    <text x="72" y="23" fill="#f6f8f5" font-family="Arial, sans-serif" font-size="25" font-weight="700">NeuralRecruit</text>
+    <text x="72" y="46" fill="#7d8b80" font-family="Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2">EVIDENCE-LED HIRING INTELLIGENCE</text>
+  </g>
+  <g transform="translate(72 205)">
+    <text x="0" y="0" fill="#f6f8f5" font-family="Arial, sans-serif" font-size="66" font-weight="700">Understand every resume.</text>
+    <text x="0" y="82" fill="#57ff47" font-family="Arial, sans-serif" font-size="66" font-weight="700">Decide with evidence.</text>
+    <text x="0" y="147" fill="#a4afa6" font-family="Arial, sans-serif" font-size="24">Explainable resume intelligence and job-matching</text>
+    <text x="0" y="181" fill="#a4afa6" font-family="Arial, sans-serif" font-size="24">decision support for technical hiring.</text>
+  </g>
+  <g transform="translate(72 510)">
+    <rect width="254" height="52" rx="13" fill="url(#lime)"/>
+    <text x="24" y="34" fill="#061006" font-family="Arial, sans-serif" font-size="17" font-weight="700">Source-available showcase</text>
+    <text x="282" y="33" fill="#7fffdc" font-family="Arial, sans-serif" font-size="16">Temporary processing</text>
+    <circle cx="264" cy="27" r="4" fill="#57ff47"/>
+    <text x="512" y="33" fill="#7fffdc" font-family="Arial, sans-serif" font-size="16">Human review required</text>
+    <circle cx="494" cy="27" r="4" fill="#57ff47"/>
+  </g>
+</svg>

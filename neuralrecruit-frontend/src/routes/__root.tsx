@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import interLatinFont from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import jakartaLatinFont from "@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { OG_IMAGE_URL, SITE_DESCRIPTION, SITE_NAME } from "../lib/site-metadata";
 
 function NotFoundComponent() {
   return (
@@ -78,20 +79,25 @@ export const Route = createRootRouteWithContext()({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NeuralRecruit — Resume Match Decision Support" },
+      { title: "NeuralRecruit - Resume Match Decision Support" },
       {
         name: "description",
-        content: "Explainable, locally processed resume matching with mandatory human review.",
+        content: SITE_DESCRIPTION,
       },
-      { name: "author", content: "NeuralRecruit" },
-      { property: "og:title", content: "NeuralRecruit — Resume Match Decision Support" },
+      { name: "author", content: "Kottu Sai Kumar" },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:title", content: "NeuralRecruit - Resume Match Decision Support" },
       {
         property: "og:description",
-        content: "Explainable, locally processed resume matching with mandatory human review.",
+        content: SITE_DESCRIPTION,
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@NeuralRecruit" },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "NeuralRecruit resume intelligence showcase" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: OG_IMAGE_URL },
     ],
     links: [
       {
