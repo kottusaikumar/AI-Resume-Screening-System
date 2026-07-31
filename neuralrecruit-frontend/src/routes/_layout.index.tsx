@@ -25,6 +25,7 @@ import {
   analyzeResume,
   ApiError,
   downloadReportPdf,
+  formatExperienceRequirement,
   reviewResume,
   type ResumeReviewResult,
   type ScreeningResult,
@@ -1100,8 +1101,9 @@ export function ResultsView({
     }
   };
 
+  const experienceRequirement = formatExperienceRequirement(result);
   const yearsExp = exp
-    ? `${exp.estimated_years.toFixed(1)} / ${result.required_years ? `${result.required_years}+` : "—"}`
+    ? `${exp.estimated_years.toFixed(1)} / ${experienceRequirement ?? "—"}`
     : "—";
 
   const recIcons = [Target, Gauge, Lightbulb];

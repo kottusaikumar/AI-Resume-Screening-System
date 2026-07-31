@@ -25,6 +25,7 @@ import {
   analyzeCandidatePool,
   analyzeRolePortfolio,
   ApiError,
+  formatExperienceRequirement,
   type RoleComparisonInput,
   type ScreeningResult,
 } from "@/lib/api";
@@ -271,8 +272,8 @@ function MatchLabPage() {
           items: response.roles.map((role) => ({
             rank: role.rank,
             name: role.role_title,
-            context: role.result.required_years
-              ? `${role.result.required_years}+ years requested`
+            context: formatExperienceRequirement(role.result)
+              ? `${formatExperienceRequirement(role.result)} years requested`
               : "Experience requirement not specified",
             result: role.result,
           })),

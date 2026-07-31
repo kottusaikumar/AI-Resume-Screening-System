@@ -120,6 +120,8 @@ export interface ScreeningResult {
   match_label: string;
   retention_risk: string;
   required_years?: number | null;
+  required_experience_min?: number | null;
+  required_experience_max?: number | null;
   salary_fit: string;
   alignment_summary: string;
   alignment_gap?: string | null;
@@ -131,6 +133,23 @@ export interface ScreeningResult {
   decision_status: string;
   advisory_only: boolean;
   score_disclaimer: string;
+}
+
+export function formatExperienceRequirement(
+  result: Pick<
+    ScreeningResult,
+    "required_years" | "required_experience_min" | "required_experience_max"
+  >,
+): string | null {
+  const minimum = result.required_experience_min;
+  const maximum = result.required_experience_max;
+  if (minimum != null && maximum != null) {
+    if (minimum === maximum) return minimum > 0 ? `${minimum}+` : "0";
+    return `${minimum}-${maximum}`;
+  }
+  if (minimum != null) return minimum > 0 ? `${minimum}+` : "0";
+  if (maximum != null) return `Up to ${maximum}`;
+  return result.required_years != null ? `${result.required_years}+` : null;
 }
 
 export interface SuggestedRole {

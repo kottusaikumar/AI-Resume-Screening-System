@@ -119,6 +119,8 @@ class ScreeningResponse(BaseModel):
     match_label: str = "Limited Match"
     retention_risk: str = "Not assessed"
     required_years: Optional[float] = None
+    required_experience_min: Optional[float] = None
+    required_experience_max: Optional[float] = None
     salary_fit: str = "Not specified"
     alignment_summary: str = ""
     alignment_gap: Optional[str] = None

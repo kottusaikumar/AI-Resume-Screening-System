@@ -15,7 +15,7 @@ Fix: split resume + JD into sentences -> many documents -> meaningful IDF.
 
 import datetime
 import re
-from typing import List, Set, Tuple, Optional
+from typing import Any, List, Set, Tuple, Optional
 from app.models.schemas import DetailedResumeAnalysis, SkillWithContext, JobRole, ResumeQuality, SectionAnalysis
 
 import numpy as np
@@ -26,12 +26,17 @@ from sklearn.metrics.pairwise import cosine_similarity
 from app.core import config
 from app.core.caching import get_content_hash, get_bm25_from_cache, set_bm25_in_cache
 from app.core.lsa_similarity import lsa_score
-from app.core.nlp_utils import skill_in_resume, build_resume_skill_set, normalise
+from app.core.nlp_utils import (
+    build_resume_skill_set,
+    normalise,
+    skill_in_resume,
+    skill_keys_match,
+)
 
-W_DENSE               = 0.25
-W_BM25                = 0.15
+W_DENSE               = 0.15
+W_BM25                = 0.05
 W_TFIDF               = 0.00  # Diagnostic only; BM25 already covers lexical relevance
-W_KEYWORD             = 0.30
+W_KEYWORD             = 0.50
 W_POSITIONAL_SKILL    = 0.15
 W_EXPERIENCE_SKILL    = 0.15
 W_RESUME_QUALITY      = 0.00  # Reported separately; never part of role alignment
@@ -124,6 +129,35 @@ def _tfidf_score(resume_text: str, jd_text: str) -> float:
         return 0.0
 
 
+def _keyword_units(jd_keywords: List[dict]) -> List[dict[str, Any]]:
+    """Collapse explicit OR alternatives into one independently scored unit."""
+    grouped: dict[str, dict[str, Any]] = {}
+    for keyword in jd_keywords:
+        unit_id = keyword.get("alternative_group") or f"skill:{keyword['key']}"
+        unit = grouped.setdefault(
+            unit_id,
+            {
+                "keys": [],
+                "displays": [],
+                "weight": 0.0,
+                "requirement_level": "other",
+            },
+        )
+        unit["keys"].append(normalise(keyword["key"]))
+        unit["displays"].append(keyword.get("display", keyword["key"]))
+        weighted_importance = float(keyword.get("score", 1.0)) * float(
+            keyword.get("importance_multiplier", 1.0)
+        )
+        unit["weight"] = max(unit["weight"], weighted_importance)
+        level = keyword.get("requirement_level", "other")
+        level_priority = {"preferred": 0, "other": 1, "responsibility": 2, "required": 3}
+        if level_priority.get(level, 1) > level_priority.get(
+            unit["requirement_level"], 1
+        ):
+            unit["requirement_level"] = level
+    return list(grouped.values())
+
+
 def _positional_skill_score(
     jd_keywords: List[dict],
     detailed_resume_analysis: DetailedResumeAnalysis,
@@ -134,34 +168,38 @@ def _positional_skill_score(
     """
     if not jd_keywords: return 1.0
 
-    total_jd_weight = sum(kw.get("score", 1.0) for kw in jd_keywords)
+    units = _keyword_units(jd_keywords)
+    total_jd_weight = sum(unit["weight"] for unit in units)
     if total_jd_weight == 0: return 0.0
 
     matched_positional_weight = 0.0
     resume_skills_with_context = detailed_resume_analysis.all_extracted_skills
 
-    for jd_kw in jd_keywords:
-        jd_skill_key = normalise(jd_kw["key"])
-        jd_skill_score = jd_kw.get("score", 1.0)
-
+    for unit in units:
+        best_position_bonus = 0.0
         for res_skill_ctx in resume_skills_with_context:
-            res_skill_key = normalise(res_skill_ctx.skill)
-            if res_skill_key == jd_skill_key:
+            if any(
+                skill_keys_match(required_key, res_skill_ctx.skill)
+                for required_key in unit["keys"]
+            ):
                 # Assign positional bonus
                 position_bonus = 0.35
                 if res_skill_ctx.section == "summary":
-                    position_bonus = 0.65
+                    position_bonus = 0.5
                 elif res_skill_ctx.section == "skills":
-                    position_bonus = 0.55
+                    position_bonus = 0.65
                 elif res_skill_ctx.section == "experience" and res_skill_ctx.end_year and res_skill_ctx.end_year >= datetime.datetime.now().year - 2:
                     position_bonus = 1.0
                 elif res_skill_ctx.section == "experience":
-                    position_bonus = 0.8
+                    position_bonus = 0.85
                 elif res_skill_ctx.section == "projects":
                     position_bonus = 0.9
-                
-                matched_positional_weight += (jd_skill_score * position_bonus)
-                break # Count each JD skill only once, even if mentioned multiple times in resume
+                elif res_skill_ctx.section == "certifications":
+                    position_bonus = 0.6
+                elif res_skill_ctx.section == "education":
+                    position_bonus = 0.55
+                best_position_bonus = max(best_position_bonus, position_bonus)
+        matched_positional_weight += unit["weight"] * best_position_bonus
 
     # Normalize by total possible JD keyword weight, clipped to 1.0
     score = min(1.0, matched_positional_weight / total_jd_weight) if total_jd_weight > 0 else 0.0
@@ -170,6 +208,8 @@ def _positional_skill_score(
 def _experience_skill_score(
     jd_keywords: List[dict],
     detailed_resume_analysis: DetailedResumeAnalysis,
+    required_years: Optional[float] = None,
+    fresher_role: bool = False,
 ) -> float:
     """
     Scores skills based on the estimated duration of their usage in the resume.
@@ -177,25 +217,54 @@ def _experience_skill_score(
     """
     if not jd_keywords: return 1.0
 
-    total_jd_weight = sum(kw.get("score", 1.0) for kw in jd_keywords)
+    units = _keyword_units(jd_keywords)
+    total_jd_weight = sum(unit["weight"] for unit in units)
     if total_jd_weight == 0: return 0.0
 
     matched_experience_weight = 0.0
     resume_skills_with_context = detailed_resume_analysis.all_extracted_skills
 
-    for jd_kw in jd_keywords:
-        jd_skill_key = normalise(jd_kw["key"])
-        jd_skill_score = jd_kw.get("score", 1.0)
-        
-        max_skill_duration = 0
+    if fresher_role or (required_years is not None and required_years <= 1):
+        target_months = 6.0
+        project_credit = 0.7
+        foundational_credit = 0.3
+        learning_credit = 0.4
+    elif required_years is not None:
+        target_months = min(60.0, max(12.0, required_years * 12.0))
+        project_credit = 0.0
+        foundational_credit = 0.0
+        learning_credit = 0.0
+    else:
+        target_months = 60.0
+        project_credit = 0.0
+        foundational_credit = 0.0
+        learning_credit = 0.0
+
+    for unit in units:
+        best_evidence = 0.0
         for res_skill_ctx in resume_skills_with_context:
-            res_skill_key = normalise(res_skill_ctx.skill)
-            if res_skill_key == jd_skill_key and res_skill_ctx.duration_months is not None:
-                max_skill_duration = max(max_skill_duration, res_skill_ctx.duration_months)
-        
-        # Reward skills with longer estimated usage
-        # Max duration capped at 5 years (60 months) for scoring purposes to prevent single long roles from dominating
-        matched_experience_weight += jd_skill_score * min(1.0, max_skill_duration / 60.0)
+            if not any(
+                skill_keys_match(required_key, res_skill_ctx.skill)
+                for required_key in unit["keys"]
+            ):
+                continue
+            if res_skill_ctx.duration_months is not None:
+                best_evidence = max(
+                    best_evidence,
+                    min(1.0, res_skill_ctx.duration_months / target_months),
+                )
+            elif res_skill_ctx.section == "projects":
+                # Projects are valid evidence for explicitly entry-level roles,
+                # but never fabricate professional duration from them.
+                best_evidence = max(best_evidence, project_credit)
+            elif res_skill_ctx.section in {"education", "certifications"}:
+                best_evidence = max(best_evidence, learning_credit)
+            elif res_skill_ctx.section in {"skills", "summary"}:
+                # A declaration is weak but relevant evidence for a role that
+                # explicitly accepts freshers. It never receives professional
+                # duration credit and is worth less than project evidence.
+                best_evidence = max(best_evidence, foundational_credit)
+        matched_experience_weight += unit["weight"] * best_evidence
 
     score = min(1.0, matched_experience_weight / total_jd_weight) if total_jd_weight > 0 else 0.0
     return score
@@ -209,6 +278,28 @@ def _resume_quality_score(resume_quality: ResumeQuality, section_analysis: Secti
     
     # Simple average for now, can be weighted further if needed
     return (quality_component + completeness_component) / 2.0
+
+
+def _overall_experience_fit_score(
+    candidate_years: float,
+    required_years: Optional[float],
+    fresher_role: bool,
+) -> Optional[float]:
+    """
+    Compare total dated experience only when the JD states an overall target.
+
+    A general "0-1 years / freshers" requirement is satisfied by an entry-level
+    candidate and must not require every individual tool to have six months of
+    professional usage. Skill-specific tenure is a different requirement and
+    should only be assessed when a JD explicitly states it.
+    """
+    if fresher_role and (required_years is None or required_years <= 0):
+        return 1.0
+    if required_years is None:
+        return None
+    if required_years <= 0:
+        return 1.0
+    return min(1.0, max(0.0, candidate_years) / required_years)
 
 def _keyword_score(
     jd_keywords: List[dict],
@@ -233,14 +324,19 @@ def _keyword_score(
     matched, missing = [], []
     matched_weight = 0.0
     total_weight = 0.0
-    for kw in jd_keywords:
-        weight = max(float(kw.get("score", 1)), 0.0) or 1.0
+    for unit in _keyword_units(jd_keywords):
+        weight = max(float(unit["weight"]), 0.0) or 1.0
         total_weight += weight
-        if skill_in_resume(kw["key"], resume_lower, taxonomy_keys, token_set):
-            matched.append(kw["display"])
+        matched_members = [
+            display
+            for key, display in zip(unit["keys"], unit["displays"])
+            if skill_in_resume(key, resume_lower, taxonomy_keys, token_set)
+        ]
+        if matched_members:
+            matched.extend(matched_members)
             matched_weight += weight
         else:
-            missing.append(kw["display"])
+            missing.append(" / ".join(unit["displays"]))
     coverage = (matched_weight / total_weight) if total_weight > 0 else (len(matched) / len(jd_keywords))
     return coverage, matched, missing
 
@@ -257,6 +353,8 @@ def calculate_match_score(
     resume_quality: ResumeQuality,
     section_analysis: SectionAnalysis,
     weights: dict | None = None,
+    required_years: Optional[float] = None,
+    fresher_role: bool = False,
 ) -> dict:
     w_dense            = weights.get("dense", W_DENSE) if weights else W_DENSE
     w_bm25             = weights.get("bm25", W_BM25) if weights else W_BM25
@@ -303,7 +401,22 @@ def calculate_match_score(
 
     # New scoring components
     positional_skill_score = _positional_skill_score(jd_keywords, detailed_resume_analysis)
-    experience_skill_score = _experience_skill_score(jd_keywords, detailed_resume_analysis)
+    skill_depth_score = _experience_skill_score(
+        jd_keywords,
+        detailed_resume_analysis,
+        required_years=required_years,
+        fresher_role=fresher_role,
+    )
+    overall_experience_fit = _overall_experience_fit_score(
+        detailed_resume_analysis.total_experience_years,
+        required_years,
+        fresher_role,
+    )
+    experience_skill_score = (
+        overall_experience_fit
+        if overall_experience_fit is not None
+        else skill_depth_score
+    )
     combined_resume_quality_score = _resume_quality_score(resume_quality, section_analysis)
 
     final = (

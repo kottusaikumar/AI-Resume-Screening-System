@@ -212,3 +212,42 @@ Bachelor of Technology
         if item.skill.lower() == "python" and item.section == "experience"
     )
     assert python_context.duration_months == 4
+
+
+def test_detailed_sections_ignore_contact_portfolio_and_summary_phrases():
+    resume = """
+Candidate Name
+GitHub | Portfolio | LinkedIn
+
+PROFESSIONAL SUMMARY
+Entry-level engineer with internship experience building ML systems.
+
+TECHNICAL SKILLS
+Python, TensorFlow
+
+INTERNSHIP EXPERIENCE
+AI/ML Intern
+Nov 2024 - Feb 2025
+Built TensorFlow models.
+
+PERSONAL PROJECTS
+RAG Assistant
+Built a Python retrieval application.
+
+EDUCATION
+Bachelor of Technology
+
+CERTIFICATIONS & ADDITIONAL TRAINING
+Machine Learning Certificate
+"""
+
+    detailed = analyze_detailed_resume(resume)
+    project_skills = {
+        item.skill.lower()
+        for item in detailed.all_extracted_skills
+        if item.section == "projects"
+    }
+
+    assert "python" in project_skills
+    assert detailed.sections.projects is not None
+    assert "RAG Assistant" in detailed.sections.projects

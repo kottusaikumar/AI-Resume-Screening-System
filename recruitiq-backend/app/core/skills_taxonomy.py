@@ -29,6 +29,11 @@ WEB_FRONTEND = [
     "Redux", "Webpack", "Vite", "jQuery", "D3.js", "Three.js",
 ]
 
+MOBILE = [
+    "Android", "Android SDK", "iOS", "SwiftUI", "React Native", "Flutter",
+    "Xamarin", "Ionic", "Mobile Development",
+]
+
 WEB_BACKEND = [
     "Node.js", "NodeJS", "Express", "Express.js", "FastAPI", "Django",
     "Flask", "Spring Boot", "Spring", "Laravel", "Ruby on Rails",
@@ -86,7 +91,8 @@ GENERATIVE_AI = [
 COMPUTER_VISION = [
     "Computer Vision", "Image Classification", "Object Detection",
     "Image Segmentation", "Face Recognition", "OCR", "OpenCV",
-    "YOLO", "ResNet", "VGG", "EfficientNet", "Image Processing",
+    "YOLO", "ResNet", "Inception", "Inception-ResNet", "VGG",
+    "EfficientNet", "Image Processing",
     "Video Processing", "3D Vision", "Depth Estimation",
 ]
 
@@ -129,6 +135,49 @@ DEVOPS = [
 ]
 
 # ---------------------------------------------------------------------------
+# SECURITY, NETWORKING, IT OPERATIONS, QA, AND BUSINESS SYSTEMS
+# ---------------------------------------------------------------------------
+CYBERSECURITY = [
+    "Cybersecurity", "Information Security", "Network Security",
+    "Application Security", "Cloud Security", "Endpoint Security",
+    "Identity and Access Management", "IAM", "Security Operations Center",
+    "SOC", "SIEM", "Incident Response", "Threat Hunting",
+    "Threat Modeling", "Vulnerability Assessment", "Vulnerability Management",
+    "Penetration Testing", "Security Testing", "Risk Assessment",
+    "Security Auditing", "Digital Forensics", "Malware Analysis",
+    "Data Loss Prevention", "DLP", "Zero Trust", "Encryption",
+    "Cryptography", "OWASP", "OWASP Top 10", "Burp Suite", "Wireshark",
+    "Splunk", "Nmap", "Nessus", "Metasploit", "ISO 27001", "NIST",
+]
+
+NETWORKING_AND_SUPPORT = [
+    "TCP/IP", "DNS", "DHCP", "VPN", "LAN", "WAN", "Routing", "Switching",
+    "Firewall", "Load Balancing", "Active Directory", "Windows Server",
+    "System Administration", "Network Administration", "Linux Administration",
+    "Technical Support", "IT Support", "Help Desk", "Service Desk",
+    "Desktop Support", "Troubleshooting", "Remote Support", "ServiceNow",
+    "ITIL", "VMware", "Hyper-V", "Virtualization", "Microsoft 365",
+]
+
+TESTING_AND_QA = [
+    "Quality Assurance", "QA", "Software Testing", "Test Automation",
+    "Automation Testing", "Manual Testing", "Functional Testing",
+    "Regression Testing", "Integration Testing", "Unit Testing",
+    "API Testing", "UI Testing", "Mobile Testing", "Performance Testing",
+    "Load Testing", "Security Testing", "User Acceptance Testing", "UAT",
+    "Test Planning", "Test Cases", "Defect Tracking", "Selenium",
+    "Selenium WebDriver", "Cypress", "Playwright", "Appium", "Postman",
+    "JMeter", "Jest", "pytest", "JUnit", "TestNG", "Cucumber",
+]
+
+BUSINESS_AND_ENTERPRISE_IT = [
+    "Business Analysis", "Requirements Gathering", "Requirements Analysis",
+    "User Stories", "Use Cases", "SDLC", "UML", "BPMN", "ERP", "CRM",
+    "SAP", "SAP ABAP", "Salesforce", "Oracle E-Business Suite",
+    "Microsoft Dynamics 365", "SharePoint",
+]
+
+# ---------------------------------------------------------------------------
 # DOMAIN KNOWLEDGE
 # ---------------------------------------------------------------------------
 DOMAIN_SKILLS = [
@@ -138,7 +187,8 @@ DOMAIN_SKILLS = [
     "Functional Programming", "Design Patterns", "SOLID Principles",
     "Test Driven Development", "TDD", "Unit Testing", "Integration Testing",
     "Software Testing", "QA", "Code Review", "Technical Documentation",
-    "Algorithms", "Data Structures", "Competitive Programming",
+    "Algorithms", "Data Structures", "Data Structures and Algorithms",
+    "Statistics", "Probability", "Competitive Programming",
 ]
 
 # ---------------------------------------------------------------------------
@@ -156,9 +206,11 @@ SOFT_SKILLS = [
 # COMBINED FLAT TAXONOMY  (all skills, lowercased for matching)
 # ---------------------------------------------------------------------------
 ALL_TECH_SKILLS = (
-    PROGRAMMING_LANGUAGES + WEB_FRONTEND + WEB_BACKEND + DATABASES +
+    PROGRAMMING_LANGUAGES + WEB_FRONTEND + MOBILE + WEB_BACKEND + DATABASES +
     ML_FRAMEWORKS + ML_TECHNIQUES + NLP_SKILLS + GENERATIVE_AI +
-    COMPUTER_VISION + DATA_SKILLS + MLOps + CLOUD + DEVOPS + DOMAIN_SKILLS
+    COMPUTER_VISION + DATA_SKILLS + MLOps + CLOUD + DEVOPS +
+    CYBERSECURITY + NETWORKING_AND_SUPPORT + TESTING_AND_QA +
+    BUSINESS_AND_ENTERPRISE_IT + DOMAIN_SKILLS
 )
 
 # Build normalised lookup: lower → canonical display

@@ -20,7 +20,7 @@ import os
 import logging
 from collections import Counter
 from difflib import SequenceMatcher
-from typing import List, Set, Tuple
+from typing import Iterable, List, Set, Tuple
 
 from app.core.skills_taxonomy import UNIQUE_SKILLS, SKILL_LOOKUP, SOFT_SKILLS
 
@@ -121,6 +121,7 @@ SYNONYM_GROUPS = [
     {"ai", "artificial intelligence"}, {"nlp", "natural language processing"},
     {"cv", "computer vision"}, {"db", "database", "databases"},
     {"oop", "object oriented programming", "object-oriented programming"},
+    {"dsa", "data structures and algorithms"},
     {"api", "apis", "application programming interface"},
     {"ui", "user interface"}, {"ux", "user experience"},
     {"ci/cd", "ci cd", "continuous integration", "continuous deployment"},
@@ -134,7 +135,6 @@ SYNONYM_GROUPS = [
     {"rag", "retrieval augmented generation"},
     {"genai", "generative ai", "gen ai"},
     {"devops", "dev ops"}, {"oss", "open source"},
-    {"nlp", "natural language processing"},
     {"svm", "support vector machine"},
     {"cnn", "convolutional neural network"},
     {"rnn", "recurrent neural network"},
@@ -142,7 +142,23 @@ SYNONYM_GROUPS = [
     {"eda", "exploratory data analysis"},
     {"etl", "extract transform load"},
     {"tdd", "test driven development"},
-    {"ai/ml", "ai ml", "machine learning", "artificial intelligence"},
+    {"qa", "quality assurance"},
+    {"infosec", "information security"},
+    {"sysadmin", "system administration"},
+    {"tech support", "technical support"},
+    {"helpdesk", "help desk", "service desk"},
+    {"teamwork", "team work"},
+    {"problem solving", "problem-solving"},
+    {"statistics", "statistical analysis"},
+    {"data analysis", "data analytics"},
+    {
+        "hyperparameter tuning",
+        "hyperparameter optimization",
+        "hyperparameter optimisation",
+        "tuned hyperparameters",
+    },
+    {"mlops", "machine learning operations"},
+    {"vector database", "vector databases", "vector db", "vector dbs"},
 ]
 
 _SYNONYM_LOOKUP: dict = {}
@@ -159,6 +175,92 @@ def normalise(term: str) -> str:
     return t
 
 
+# Directional capability relationships. These are deliberately not synonyms:
+# a concrete task/tool can prove a broader capability, while the reverse is
+# not necessarily true. For example, NER is evidence of NLP, but merely
+# writing "NLP" does not prove NER experience.
+_CAPABILITY_IMPLICATIONS_RAW = {
+    "Named Entity Recognition": {"Natural Language Processing"},
+    "NER": {"Natural Language Processing"},
+    "Text Classification": {"Natural Language Processing"},
+    "Sentiment Analysis": {"Natural Language Processing"},
+    "Topic Modeling": {"Natural Language Processing"},
+    "Text Summarization": {"Natural Language Processing"},
+    "Machine Translation": {"Natural Language Processing"},
+    "BERT": {"Natural Language Processing", "Deep Learning"},
+    "Sentence Transformers": {"Natural Language Processing", "Deep Learning"},
+    "spaCy": {"Natural Language Processing"},
+    "NLTK": {"Natural Language Processing"},
+    "Face Recognition": {"Computer Vision"},
+    "Image Classification": {"Computer Vision"},
+    "Object Detection": {"Computer Vision"},
+    "Image Segmentation": {"Computer Vision"},
+    "Image Processing": {"Computer Vision"},
+    "OpenCV": {"Computer Vision"},
+    "YOLO": {"Computer Vision", "Deep Learning"},
+    "ResNet": {"Computer Vision", "Deep Learning"},
+    "Inception": {"Computer Vision", "Deep Learning"},
+    "Inception-ResNet": {"Computer Vision", "Deep Learning"},
+    "RAG": {"Generative AI"},
+    "Retrieval Augmented Generation": {"Generative AI"},
+    "Large Language Models": {"Generative AI"},
+    "LLM": {"Generative AI"},
+    "GPT": {"Generative AI"},
+    "Prompt Engineering": {"Generative AI"},
+    "Exploratory Data Analysis": {"Data Analysis"},
+    "EDA": {"Data Analysis"},
+    "Pandas": {"Data Analysis"},
+    "Matplotlib": {"Data Visualization"},
+    "Seaborn": {"Data Visualization"},
+    "EC2": {"AWS"},
+    "S3": {"AWS"},
+    "Lambda": {"AWS"},
+    "SageMaker": {"AWS"},
+    "Bedrock": {"AWS"},
+    "Azure ML": {"Azure"},
+    "Vertex AI": {"GCP"},
+    "Cloud Run": {"GCP"},
+    "Selenium": {"Test Automation", "Software Testing"},
+    "Selenium WebDriver": {"Test Automation", "Software Testing"},
+    "Cypress": {"Test Automation", "Software Testing"},
+    "Playwright": {"Test Automation", "Software Testing"},
+    "Appium": {"Test Automation", "Software Testing"},
+    "pytest": {"Unit Testing", "Software Testing"},
+    "JUnit": {"Unit Testing", "Software Testing"},
+    "TestNG": {"Unit Testing", "Software Testing"},
+    "JMeter": {"Performance Testing", "Load Testing", "Software Testing"},
+    "Burp Suite": {"Application Security", "Security Testing"},
+    "Nessus": {"Vulnerability Assessment"},
+    "Metasploit": {"Penetration Testing"},
+    "Splunk": {"SIEM"},
+    "Active Directory": {"Identity and Access Management"},
+}
+
+CAPABILITY_IMPLICATIONS = {
+    normalise(evidence): {normalise(capability) for capability in capabilities}
+    for evidence, capabilities in _CAPABILITY_IMPLICATIONS_RAW.items()
+}
+
+
+def expand_skill_keys(skills: Iterable[str]) -> Set[str]:
+    """Return normalized skills plus safe, directional parent capabilities."""
+    expanded = {normalise(skill) for skill in skills}
+    pending = list(expanded)
+    while pending:
+        evidence = pending.pop()
+        for implied in CAPABILITY_IMPLICATIONS.get(evidence, set()):
+            if implied not in expanded:
+                expanded.add(implied)
+                pending.append(implied)
+    return expanded
+
+
+def skill_keys_match(required_skill: str, evidence_skill: str) -> bool:
+    """Whether concrete resume evidence satisfies a JD capability."""
+    required = normalise(required_skill)
+    return required in expand_skill_keys([evidence_skill])
+
+
 # ---------------------------------------------------------------------------
 # Tech-token regex (catches things not in taxonomy like version-specific tools)
 # ---------------------------------------------------------------------------
@@ -172,6 +274,99 @@ SECTION_HEADER_RE = re.compile(
     r"tech(nical)?\s*stack|tools?|technologies)",
     re.IGNORECASE,
 )
+
+JD_REQUIRED_HEADER_RE = re.compile(
+    r"^(?:required|mandatory|minimum|must[\s-]?have|essential)"
+    r"(?:\s+(?:technical\s+)?(?:skills?|qualifications?|requirements?))?\s*:?\s*$",
+    re.I,
+)
+JD_PREFERRED_HEADER_RE = re.compile(
+    r"^(?:(?:preferred|desired|optional|bonus)"
+    r"(?:\s+(?:skills?|qualifications?))?|nice\s+to\s+have)\s*:?\s*$",
+    re.I,
+)
+JD_RESPONSIBILITY_HEADER_RE = re.compile(
+    r"^(?:key\s+)?(?:responsibilities|duties|what\s+you'?ll\s+do)"
+    r"\s*:?\s*$",
+    re.I,
+)
+JD_OTHER_HEADER_RE = re.compile(
+    r"^(?:job\s+summary|about\s+(?:the\s+)?role|qualifications?|education|"
+    r"experience|benefits?|about\s+us)\s*:?\s*$",
+    re.I,
+)
+REQUIREMENT_LEVEL_MULTIPLIERS = {
+    "required": 1.5,
+    "responsibility": 1.15,
+    "other": 0.85,
+    "preferred": 0.6,
+}
+
+
+def _plain_heading(line: str) -> str:
+    heading = re.sub(r"^\s*#{1,6}\s*", "", line).strip()
+    return heading.strip("*_ ").strip()
+
+
+def _jd_skill_requirement_levels(lines: List[str]) -> dict[str, str]:
+    """Map each extracted JD skill to its strongest stated requirement tier."""
+    priority = {"preferred": 0, "other": 1, "responsibility": 2, "required": 3}
+    levels: dict[str, str] = {}
+    current = "other"
+
+    for raw_line in lines:
+        heading = _plain_heading(raw_line)
+        if JD_REQUIRED_HEADER_RE.fullmatch(heading):
+            current = "required"
+            continue
+        if JD_PREFERRED_HEADER_RE.fullmatch(heading):
+            current = "preferred"
+            continue
+        if JD_RESPONSIBILITY_HEADER_RE.fullmatch(heading):
+            current = "responsibility"
+            continue
+        if JD_OTHER_HEADER_RE.fullmatch(heading):
+            current = "other"
+            continue
+
+        inline_level = current
+        if re.search(r"\b(?:required|must|required to|mandatory|essential)\b", raw_line, re.I):
+            inline_level = "required"
+        elif re.search(r"\b(?:preferred|nice to have|bonus|optional)\b", raw_line, re.I):
+            inline_level = "preferred"
+
+        line_skills = extract_skills_from_text(raw_line)
+        line_skills.extend(extract_tech_tokens(raw_line))
+        for skill in line_skills:
+            key = normalise(skill)
+            existing = levels.get(key)
+            if existing is None or priority[inline_level] > priority[existing]:
+                levels[key] = inline_level
+    return levels
+
+
+JD_EDUCATION_LINE_RE = re.compile(
+    r"\b(?:bachelor'?s?|master'?s?|b\.?\s*(?:tech|sc|e)|m\.?\s*(?:tech|sc|e)|"
+    r"degree|diploma|graduate|university|college|related\s+field)\b",
+    re.I,
+)
+
+
+def _education_only_skill_keys(lines: List[str]) -> Set[str]:
+    """Skills mentioned only as degree disciplines are not job skill demands."""
+    education_keys: Set[str] = set()
+    work_keys: Set[str] = set()
+    for line in lines:
+        keys = {
+            normalise(skill)
+            for skill in extract_skills_from_text(line)
+        }
+        keys.update(normalise(token) for token in extract_tech_tokens(line))
+        if JD_EDUCATION_LINE_RE.search(line):
+            education_keys.update(keys)
+        else:
+            work_keys.update(keys)
+    return education_keys - work_keys
 
 FUZZY_THRESHOLD = 0.86
 
@@ -276,6 +471,8 @@ def extract_jd_keywords(jd_text: str, max_skills: int = 30) -> List[dict]:
     scores: Counter = Counter()
     canonical_display: dict = {}
     lines = jd_text.splitlines()
+    requirement_levels = _jd_skill_requirement_levels(lines)
+    education_only_keys = _education_only_skill_keys(lines)
 
     # --- Pass 1: PhraseMatcher on full text ---
     taxonomy_skills = extract_skills_from_text(jd_text)
@@ -309,11 +506,52 @@ def extract_jd_keywords(jd_text: str, max_skills: int = 30) -> List[dict]:
                 scores[key] += (4 if in_section else 2)
                 canonical_display.setdefault(key, tok)
 
+    # Preserve explicit alternatives such as "TensorFlow, PyTorch, or Keras".
+    # They are scored as one requirement later; satisfying any member satisfies
+    # the group. Avoid degree/discipline lists ending in "or a related field".
+    alternative_groups: dict[str, str] = {}
+    for line_index, line in enumerate(lines):
+        if not re.search(r"\bor\b", line, re.I) or re.search(
+            r"\b(?:degree|related\s+field)\b", line, re.I
+        ):
+            continue
+        line_keys = {
+            normalise(skill)
+            for skill in extract_skills_from_text(line)
+            if normalise(skill) in scores
+        }
+        line_keys.update(
+            normalise(token)
+            for token in extract_tech_tokens(line)
+            if normalise(token) in scores
+        )
+        if len(line_keys) >= 2:
+            group_id = f"alternative-{line_index}"
+            for key in line_keys:
+                alternative_groups[key] = group_id
+
     ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     return [
-        {"key": key, "display": canonical_display.get(key, key), "score": score}
+        {
+            "key": key,
+            "display": canonical_display.get(key, key),
+            "score": score,
+            "requirement_level": requirement_levels.get(key, "other"),
+            "importance_multiplier": REQUIREMENT_LEVEL_MULTIPLIERS[
+                requirement_levels.get(key, "other")
+            ],
+            **(
+                {"alternative_group": alternative_groups[key]}
+                if key in alternative_groups
+                else {}
+            ),
+        }
         for key, score in ranked[:max_skills]
-        if key not in GENERIC_NOISE and len(key) > 1
+        if (
+            key not in GENERIC_NOISE
+            and key not in education_only_keys
+            and len(key) > 1
+        )
     ]
 
 
@@ -327,7 +565,7 @@ def build_resume_skill_set(resume_text: str) -> Tuple[Set[str], Set[str]]:
     'Data Analysis', 'Neural Networks' are found reliably.
     """
     taxonomy_skills = extract_skills_from_text(resume_text)
-    taxonomy_keys = {normalise(s) for s in taxonomy_skills}
+    taxonomy_keys = expand_skill_keys(taxonomy_skills)
 
     words = re.findall(r"[A-Za-z][A-Za-z0-9+#.\-/]*", resume_text.lower())
     ngram_set: Set[str] = set()
@@ -363,12 +601,20 @@ def skill_in_resume(
         return True
     if skill_key in ngram_set:
         return True
-    if skill_key in resume_lower:
+    if re.search(
+        rf"(?<![A-Za-z0-9]){re.escape(skill_key)}(?![A-Za-z0-9])",
+        resume_lower,
+        flags=re.I,
+    ):
         return True
     gid = _SYNONYM_LOOKUP.get(skill_key)
     if gid is not None:
         for variant in SYNONYM_GROUPS[gid]:
-            if variant in resume_lower or variant in ngram_set:
+            if variant in ngram_set or re.search(
+                rf"(?<![A-Za-z0-9]){re.escape(variant)}(?![A-Za-z0-9])",
+                resume_lower,
+                flags=re.I,
+            ):
                 return True
     for tok in ngram_set:
         if abs(len(tok) - len(skill_key)) <= 2 and fuzzy_ratio(skill_key, tok) >= FUZZY_THRESHOLD:

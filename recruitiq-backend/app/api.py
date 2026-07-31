@@ -65,6 +65,7 @@ from app.core.presentation import (
     compute_match_label,
     compute_retention_risk,
     compute_salary_fit,
+    extract_experience_requirement,
     extract_required_years,
     generate_alignment_gap,
     generate_alignment_summary,
@@ -267,6 +268,38 @@ def _load_scoring_weights(organization_id: str) -> dict:
     if not isinstance(stored, dict) or not stored:
         return DEFAULT_WEIGHTS.copy()
 
+    # Automatically migrate only exact historical defaults. Deliberate custom
+    # recruiter settings remain untouched.
+    historical_defaults = (
+        {
+            "dense": 0.25,
+            "bm25": 0.15,
+            "tfidf": 0.0,
+            "keyword": 0.30,
+            "positional_skill": 0.15,
+            "experience_skill": 0.15,
+            "resume_quality": 0.0,
+        },
+        {
+            "dense": 0.30,
+            "bm25": 0.20,
+            "tfidf": 0.10,
+            "keyword": 0.20,
+            "positional_skill": 0.10,
+            "experience_skill": 0.05,
+            "resume_quality": 0.05,
+        },
+    )
+    if any(
+        all(
+            key in stored
+            and abs(float(stored[key]) - expected_value) <= 1e-6
+            for key, expected_value in old_default.items()
+        )
+        for old_default in historical_defaults
+    ):
+        return DEFAULT_WEIGHTS.copy()
+
     legacy_keys = ("dense", "bm25", "tfidf", "keyword")
     new_keys = ("positional_skill", "experience_skill", "resume_quality")
     if all(key in stored for key in legacy_keys) and not any(key in stored for key in new_keys):
@@ -344,6 +377,7 @@ def _run_screening(
     resume_quality    = analyze_quality(resume_text)
     experience_info   = estimate_experience(resume_text)
     detailed_analysis = analyze_detailed_resume(resume_text)
+    experience_requirement = extract_experience_requirement(job_description)
 
     # Hybrid score
     scores = calculate_match_score(
@@ -358,6 +392,12 @@ def _run_screening(
         resume_quality=resume_quality,
         section_analysis=section_analysis,
         weights=weights,
+        required_years=(
+            experience_requirement.minimum_years
+            if experience_requirement
+            else None
+        ),
+        fresher_role=bool(experience_requirement and experience_requirement.is_fresher),
     )
 
     # Mandatory skills — from JD auto-detection + optional frontend override
@@ -412,6 +452,16 @@ def _run_screening(
         match_label=match_label,
         retention_risk=retention_risk,
         required_years=required_years,
+        required_experience_min=(
+            experience_requirement.minimum_years
+            if experience_requirement
+            else None
+        ),
+        required_experience_max=(
+            experience_requirement.maximum_years
+            if experience_requirement
+            else None
+        ),
         salary_fit=salary_fit,
         alignment_summary=alignment_summary,
         alignment_gap=alignment_gap,

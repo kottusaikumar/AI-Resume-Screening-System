@@ -49,17 +49,24 @@ ACTION_VERBS: Set[str] = {
 # ---------------------------------------------------------------------------
 SECTION_PATTERNS: Dict[str, re.Pattern] = {
     "summary":        re.compile(
-        r"\b(summary|objective|profile|about\s*me|career\s*summary|professional\s*summary|overview)\b", re.I),
+        r"(?:summary|objective|profile|about\s*me|career\s*summary|"
+        r"professional\s*summary|overview)\s*:?", re.I),
     "experience":     re.compile(
-        r"\b(experience|employment|work\s*history|professional\s*experience|career\s*history|internship[s]?|positions?)\b", re.I),
+        r"(?:experience|employment(?:\s+history)?|work\s*history|"
+        r"professional\s*experience|career\s*history|internship(?:s|\s+experience)?|"
+        r"relevant\s+experience|positions?)\s*:?", re.I),
     "education":      re.compile(
-        r"\b(education|academic|degree|university|college|school|b\.?tech|m\.?tech|b\.?sc|m\.?sc|bachelor|master)\b", re.I),
+        r"(?:education|academic\s+background|academic\s+qualifications?)\s*:?", re.I),
     "skills":         re.compile(
-        r"\b(skills?|technical\s*skills?|core\s*competencies|competencies|technologies|tools|stack)\b", re.I),
+        r"(?:skills?|technical\s*skills?|core\s*competencies|competencies|"
+        r"technologies|technical\s+stack)\s*:?", re.I),
     "certifications": re.compile(
-        r"\b(certifications?|certificates?|licen[sc]es?|credentials?|accreditations?|training)\b", re.I),
+        r"(?:certifications?|certificates?|licen[sc]es?|credentials?|"
+        r"accreditations?|(?:certifications?\s*&\s*)?(?:additional\s+)?training)"
+        r"\s*:?", re.I),
     "projects":       re.compile(
-        r"\b(projects?|portfolio|open.?source|side.?projects?|personal\s*projects?)\b", re.I),
+        r"(?:projects?|project\s+portfolio|open.?source\s+projects?|"
+        r"side.?projects?|personal\s*projects?)\s*:?", re.I),
 }
 
 # ---------------------------------------------------------------------------
@@ -493,13 +500,18 @@ def _extract_sections_raw(text: str) -> Dict[str, str]:
     """Extract raw text content for each major resume section."""
     section_starts: Dict[str, int] = {}
     section_ends: Dict[str, int] = {}
-    text_lower = text.lower()
 
-    # Find start of each section
-    for section_name, pattern in SECTION_PATTERNS.items():
-        match = pattern.search(text_lower)
-        if match:
-            section_starts[section_name] = match.start()
+    # Only complete lines are section headings. Searching anywhere in the
+    # document misclassified phrases such as "internship experience" in a
+    # summary and a contact-link label such as "Portfolio" as real boundaries.
+    offset = 0
+    for raw_line in text.splitlines(keepends=True):
+        heading = raw_line.strip()
+        for section_name, pattern in SECTION_PATTERNS.items():
+            if section_name not in section_starts and pattern.fullmatch(heading):
+                section_starts[section_name] = offset
+                break
+        offset += len(raw_line)
 
     # Determine end of each section (start of next section, or end of document)
     sorted_starts = sorted(section_starts.items(), key=lambda item: item[1])
@@ -820,17 +832,44 @@ MANDATORY_MARKERS_RE = re.compile(
     r"must\s*possess|must\s*include|requirements?:)\b",
     re.I,
 )
+REQUIRED_SKILLS_HEADER_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?(?:required|mandatory|must[-\s]?have|essential)"
+    r"\s+(?:technical\s+)?skills?\s*:?\s*$",
+    re.I,
+)
+JD_SECTION_HEADER_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?(?:job\s+summary|key\s+responsibilities|"
+    r"preferred\s+skills?|qualifications?|nice\s+to\s+have|"
+    r"education|experience|benefits?)\s*:?\s*$",
+    re.I,
+)
 
 def detect_mandatory_skills(jd_text: str, missing_skills: List[str]) -> List[str]:
-    mandatory_lines = [
-        line.lower() for line in jd_text.splitlines()
-        if MANDATORY_MARKERS_RE.search(line)
-    ]
+    mandatory_lines = []
+    in_required_skills = False
+    for raw_line in jd_text.splitlines():
+        line = raw_line.strip()
+        if REQUIRED_SKILLS_HEADER_RE.match(line):
+            in_required_skills = True
+            continue
+        if in_required_skills and JD_SECTION_HEADER_RE.match(line):
+            in_required_skills = False
+        if in_required_skills or MANDATORY_MARKERS_RE.search(line):
+            mandatory_lines.append(line.lower())
+
     if not mandatory_lines:
         return []
     mandatory_missing = []
     for skill in missing_skills:
-        skill_lower = skill.lower()
-        if any(skill_lower in line for line in mandatory_lines):
+        alternatives = [
+            part.strip().lower()
+            for part in re.split(r"\s*/\s*", skill)
+            if part.strip()
+        ]
+        if any(
+            alternative in line
+            for alternative in alternatives
+            for line in mandatory_lines
+        ):
             mandatory_missing.append(skill)
     return mandatory_missing

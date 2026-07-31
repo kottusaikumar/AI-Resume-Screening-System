@@ -19,6 +19,7 @@ Provides:
 """
 
 import re
+from dataclasses import dataclass
 from typing import List, Optional
 
 from app.models.schemas import ExperienceInfo, FunnelStage, ResumeQuality
@@ -47,16 +48,56 @@ def compute_retention_risk(
 
 
 # ---------------------------------------------------------------------------
-# Required years (parsed from JD)
+# Required experience (parsed from JD)
 # ---------------------------------------------------------------------------
-_YEARS_RE = re.compile(r"(\d{1,2})\s*\+?\s*(?:-|to)?\s*(?:\d{1,2}\s*)?\+?\s*years?", re.I)
+@dataclass(frozen=True)
+class ExperienceRequirement:
+    minimum_years: float
+    maximum_years: Optional[float]
+    is_fresher: bool = False
+
+
+_YEAR_RANGE_RE = re.compile(
+    r"(\d{1,2}(?:\.\d+)?)\s*(?:-|–|—|to)\s*"
+    r"(\d{1,2}(?:\.\d+)?)\s*(?:years?|yrs?)\b",
+    re.I,
+)
+_SINGLE_YEARS_RE = re.compile(
+    r"(?:(?:at\s+least|minimum(?:\s+of)?|min\.?)\s+)?"
+    r"(\d{1,2}(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\b",
+    re.I,
+)
+_FRESHER_RE = re.compile(r"\b(?:fresher|freshers|entry[-\s]?level)\b", re.I)
+
+
+def extract_experience_requirement(jd_text: str) -> Optional[ExperienceRequirement]:
+    """Return the JD's stated experience range without discarding zero."""
+    is_fresher = bool(_FRESHER_RE.search(jd_text))
+    ranges = [
+        (float(match.group(1)), float(match.group(2)))
+        for match in _YEAR_RANGE_RE.finditer(jd_text)
+        if float(match.group(1)) <= float(match.group(2)) <= 20
+    ]
+    if ranges:
+        minimum, maximum = ranges[0]
+        return ExperienceRequirement(minimum, maximum, is_fresher or maximum <= 1)
+
+    singles = [
+        float(match.group(1))
+        for match in _SINGLE_YEARS_RE.finditer(jd_text)
+        if 0 <= float(match.group(1)) <= 20
+    ]
+    if singles:
+        years = singles[0]
+        return ExperienceRequirement(years, years, is_fresher or years <= 1)
+    if is_fresher:
+        return ExperienceRequirement(0.0, 1.0, True)
+    return None
 
 
 def extract_required_years(jd_text: str) -> Optional[float]:
-    matches = [int(m) for m in _YEARS_RE.findall(jd_text) if 0 < int(m) <= 20]
-    if not matches:
-        return None
-    return float(max(matches))
+    requirement = extract_experience_requirement(jd_text)
+    return requirement.maximum_years if requirement else None
 
 
 # ---------------------------------------------------------------------------
