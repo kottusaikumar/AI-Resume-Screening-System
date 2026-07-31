@@ -73,6 +73,17 @@ def lsa_score(original_resume: str, original_jd: str, n_components: int = 40) ->
     except ValueError:
         return 0.0
 
+    n_resume = len(resume_sents)
+    # LSA can only infer a latent relationship from this request-local corpus
+    # when the two sides are connected by at least one normalized term feature.
+    # With completely disjoint vocabularies the term-document matrix has
+    # disconnected blocks; truncating that matrix can otherwise introduce a
+    # small, platform-dependent positive cosine that is not evidence of fit.
+    resume_support = np.asarray(tfidf_matrix[:n_resume].sum(axis=0)).ravel() > 0
+    jd_support = np.asarray(tfidf_matrix[n_resume:].sum(axis=0)).ravel() > 0
+    if not np.any(resume_support & jd_support):
+        return 0.0
+
     n_features = tfidf_matrix.shape[1]
     n_samples = tfidf_matrix.shape[0]
     # SVD needs k < min(n_samples, n_features); fall back gracefully on tiny inputs.
@@ -83,7 +94,6 @@ def lsa_score(original_resume: str, original_jd: str, n_components: int = 40) ->
     svd = TruncatedSVD(n_components=k, random_state=42)
     latent = svd.fit_transform(tfidf_matrix)  # (n_samples, k)
 
-    n_resume = len(resume_sents)
     resume_vec = latent[:n_resume].mean(axis=0)
     jd_vec = latent[n_resume:].mean(axis=0)
 

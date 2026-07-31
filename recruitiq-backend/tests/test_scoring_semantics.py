@@ -19,16 +19,36 @@ def test_negative_dense_similarity_is_not_inflated_to_partial_match():
 
 
 def test_unrelated_lsa_documents_do_not_receive_half_credit():
-    resume = (
-        "Built Python APIs. Deployed FastAPI services. Managed PostgreSQL databases. "
-        "Tested backend systems."
-    )
-    unrelated_job = (
-        "Created brand logos. Designed print typography. Illustrated marketing posters. "
-        "Edited Adobe Photoshop assets."
-    )
+    resume_sentences = [
+        "Built Python APIs",
+        "Deployed FastAPI services",
+        "Managed PostgreSQL databases",
+        "Tested backend systems",
+    ]
+    unrelated_job_sentences = [
+        "Created brand logos",
+        "Designed print typography",
+        "Illustrated marketing posters",
+        "Edited Adobe Photoshop assets",
+    ]
+    variants = [
+        (resume_sentences, unrelated_job_sentences),
+        (list(reversed(resume_sentences)), unrelated_job_sentences),
+        (resume_sentences, list(reversed(unrelated_job_sentences))),
+        (list(reversed(resume_sentences)), list(reversed(unrelated_job_sentences))),
+    ]
 
-    assert lsa_score(resume, unrelated_job) < 0.05
+    for resume_parts, job_parts in variants:
+        resume = ". ".join(resume_parts) + "."
+        unrelated_job = ". ".join(job_parts) + "."
+        assert lsa_score(resume, unrelated_job) == 0.0
+
+
+def test_lsa_preserves_similarity_when_meaningful_features_connect_documents():
+    resume = "Built Python FastAPI services. Designed reliable REST APIs."
+    related_job = "Seeking a Python engineer to build FastAPI APIs and backend services."
+
+    assert lsa_score(resume, related_job) > 0.0
 
 
 def test_production_weights_exclude_redundant_and_non_fit_signals():
