@@ -6,6 +6,10 @@
 
 - [NeuralRecruit showcase](https://neuralrecruit.vercel.app/): Product overview, resume-review workflow, job-matching workflow, safeguards, supported IT roles, architecture, and frequently asked questions.
 - [About NeuralRecruit](https://neuralrecruit.vercel.app/about): Project purpose, implementation summary, responsible-use principles, source code, and feedback path.
+- [Product features](https://neuralrecruit.vercel.app/features): Four focused workflows, inspectable report output, supported IT scope, and operational boundaries.
+- [Methodology](https://neuralrecruit.vercel.app/methodology): Document extraction, IT terminology normalization, retrieval signals, experience handling, score interpretation, and limitations.
+- [Responsible-use safeguards](https://neuralrecruit.vercel.app/safeguards): Human oversight, fairness boundaries, upload controls, retention minimization, and organizational responsibilities.
+- [Public showcase privacy](https://neuralrecruit.vercel.app/privacy): Browser and backend processing, temporary-file cleanup, disabled history persistence, hosting boundaries, and safer demonstration practices.
 - [Source code](https://github.com/kottusaikumar/AI-Resume-Screening-System): Complete React, TypeScript, FastAPI, and deterministic NLP implementation.
 - [Sitemap](https://neuralrecruit.vercel.app/sitemap.xml): Canonical indexable pages.
 

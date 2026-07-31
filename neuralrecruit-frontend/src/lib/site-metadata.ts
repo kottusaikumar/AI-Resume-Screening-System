@@ -93,3 +93,56 @@ export const ABOUT_STRUCTURED_DATA = {
     "@id": `${SITE_URL}/#software`,
   },
 } as const;
+
+export function createPublicPageStructuredData({
+  path,
+  name,
+  description,
+  pageType = "WebPage",
+}: {
+  path: string;
+  name: string;
+  description: string;
+  pageType?: "WebPage" | "CollectionPage";
+}) {
+  const pageUrl = `${SITE_URL}/${path}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": pageType,
+        "@id": `${pageUrl}#page`,
+        url: pageUrl,
+        name,
+        description,
+        inLanguage: "en",
+        dateModified: "2026-07-31",
+        isPartOf: {
+          "@id": `${SITE_URL}/#website`,
+        },
+        mainEntity: {
+          "@id": `${SITE_URL}/#software`,
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "NeuralRecruit",
+            item: `${SITE_URL}/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name,
+            item: pageUrl,
+          },
+        ],
+      },
+    ],
+  } as const;
+}

@@ -11,6 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SafeguardsRouteImport } from './routes/safeguards'
 import { Route as LayoutIndexRouteImport } from './routes/_layout.index'
 import { Route as LayoutAnalyticsRouteImport } from './routes/_layout.analytics'
 import { Route as LayoutCompareRouteImport } from './routes/_layout.compare'
@@ -25,6 +29,26 @@ const LayoutRoute = LayoutRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SafeguardsRoute = SafeguardsRouteImport.update({
+  id: '/safeguards',
+  path: '/safeguards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
@@ -61,6 +85,10 @@ const LayoutSkillsDbRoute = LayoutSkillsDbRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/about': typeof AboutRoute
+  '/features': typeof FeaturesRoute
+  '/methodology': typeof MethodologyRoute
+  '/privacy': typeof PrivacyRoute
+  '/safeguards': typeof SafeguardsRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/compare': typeof LayoutCompareRoute
   '/history': typeof LayoutHistoryRoute
@@ -69,6 +97,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
+  '/features': typeof FeaturesRoute
+  '/methodology': typeof MethodologyRoute
+  '/privacy': typeof PrivacyRoute
+  '/safeguards': typeof SafeguardsRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/compare': typeof LayoutCompareRoute
   '/history': typeof LayoutHistoryRoute
@@ -80,6 +112,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/about': typeof AboutRoute
+  '/features': typeof FeaturesRoute
+  '/methodology': typeof MethodologyRoute
+  '/privacy': typeof PrivacyRoute
+  '/safeguards': typeof SafeguardsRoute
   '/_layout/analytics': typeof LayoutAnalyticsRoute
   '/_layout/compare': typeof LayoutCompareRoute
   '/_layout/history': typeof LayoutHistoryRoute
@@ -92,6 +128,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/features'
+    | '/methodology'
+    | '/privacy'
+    | '/safeguards'
     | '/analytics'
     | '/compare'
     | '/history'
@@ -100,6 +140,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
+    | '/features'
+    | '/methodology'
+    | '/privacy'
+    | '/safeguards'
     | '/analytics'
     | '/compare'
     | '/history'
@@ -110,6 +154,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_layout'
     | '/about'
+    | '/features'
+    | '/methodology'
+    | '/privacy'
+    | '/safeguards'
     | '/_layout/analytics'
     | '/_layout/compare'
     | '/_layout/history'
@@ -121,6 +169,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   AboutRoute: typeof AboutRoute
+  FeaturesRoute: typeof FeaturesRoute
+  MethodologyRoute: typeof MethodologyRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SafeguardsRoute: typeof SafeguardsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -137,6 +189,34 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/safeguards': {
+      id: '/safeguards'
+      path: '/safeguards'
+      fullPath: '/safeguards'
+      preLoaderRoute: typeof SafeguardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/': {
@@ -208,6 +288,10 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   AboutRoute: AboutRoute,
+  FeaturesRoute: FeaturesRoute,
+  MethodologyRoute: MethodologyRoute,
+  PrivacyRoute: PrivacyRoute,
+  SafeguardsRoute: SafeguardsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

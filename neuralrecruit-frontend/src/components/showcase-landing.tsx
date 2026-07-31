@@ -102,7 +102,7 @@ const FAQ = [
   {
     question: "Does it send resumes to an external AI API?",
     answer:
-      "No paid or external LLM API is required. Parsing, embeddings, and scoring run with self-hosted open-source components.",
+      "No. NeuralRecruit has zero LLM API cost. Resume analysis uses explainable algorithms, rule-based logic, statistical retrieval, and a curated IT taxonomy without sending candidate text to an external LLM.",
   },
   {
     question: "Can it review a resume without a job description?",
@@ -128,8 +128,9 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
           </span>
         </a>
         <nav className="landing-nav-links" aria-label="Primary navigation">
-          <a href="#workflow">How it works</a>
-          <a href="#safeguards">Safeguards</a>
+          <a href="/features">Features</a>
+          <a href="/methodology">Methodology</a>
+          <a href="/safeguards">Safeguards</a>
           <a href="/about">About</a>
         </nav>
         <button className="landing-signin-link" type="button" onClick={onEnter}>
@@ -151,7 +152,8 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
           <p className="landing-hero-lede">
             NeuralRecruit is a source-available web application for HR teams and technical
             recruiters. It turns candidate resumes into structured, reviewable intelligence, then
-            adds job-description matching only when needed. No LLM model API is required.
+            adds job-description matching only when needed. It uses explainable algorithms and
+            rule-based logic with zero LLM API cost.
           </p>
           <div className="landing-actions">
             <button type="button" className="landing-primary-cta" onClick={onEnter}>
@@ -273,7 +275,7 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
         </div>
         <div>
           <strong>0</strong>
-          <span>LLM model API dependencies</span>
+          <span>LLM API cost</span>
         </div>
       </section>
 
@@ -401,7 +403,7 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
           <p>
             NeuralRecruit uses deterministic parsing, an IT skill taxonomy, local vector retrieval,
             lexical retrieval, and evidence-oriented scoring. No external LLM API sits between the
-            resume and the report.
+            resume and the report, so the analysis has zero LLM API cost.
           </p>
           <div className="landing-stack-list">
             <span>React + TypeScript</span>
@@ -460,11 +462,16 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
         <p>Explainable resume intelligence with mandatory human review.</p>
         <div className="landing-footer-links">
           <a href="/about">About</a>
-          <a href="#roles">IT roles</a>
-          <a href="#architecture">Architecture</a>
-          <a href="#faq">FAQ</a>
-          <a href={GITHUB_URL}>Source</a>
-          <a href={GITHUB_ISSUES_URL}>Feedback</a>
+          <a href="/features">Features</a>
+          <a href="/methodology">Methodology</a>
+          <a href="/safeguards">Safeguards</a>
+          <a href="/privacy">Privacy</a>
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            Source
+          </a>
+          <a href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer">
+            Feedback
+          </a>
           <button type="button" onClick={onEnter}>
             Open showcase
           </button>

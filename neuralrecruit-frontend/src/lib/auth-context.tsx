@@ -31,7 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startShowcase = useCallback(async (): Promise<boolean> => {
-    if (user) return true;
+    // Always renew the limited showcase token before a protected workflow.
+    // In local development the backend signing secret changes after a reload;
+    // retaining only the previous user object would otherwise make an expired
+    // token look usable and the analysis request would receive a 401.
     setLoading(true);
     setError(null);
     clearSession();
@@ -48,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [clearSession, user]);
+  }, [clearSession]);
 
   useEffect(() => {
     const renew = () => {

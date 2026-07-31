@@ -1,22 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Braces,
-  FileSearch,
-  Github,
-  Radar,
-  Scale,
-  ServerCog,
-  ShieldCheck,
-} from "lucide-react";
-import {
-  ABOUT_STRUCTURED_DATA,
-  GITHUB_ISSUES_URL,
-  GITHUB_URL,
-  OG_IMAGE_URL,
-  SITE_URL,
-} from "@/lib/site-metadata";
+import { createFileRoute } from "@tanstack/react-router";
+import { FileSearch, ServerCog, ShieldCheck } from "lucide-react";
+import { PublicInfoPage, type PublicInfoSection } from "@/components/public-info-page";
+import { ABOUT_STRUCTURED_DATA, OG_IMAGE_URL, SITE_URL } from "@/lib/site-metadata";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -42,169 +27,116 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
-const PRINCIPLES = [
+const SECTIONS: readonly PublicInfoSection[] = [
   {
+    id: "purpose",
+    label: "Project purpose",
+    title: "Evidence-led support for technical hiring.",
+    body: "NeuralRecruit helps HR teams and technical recruiters turn resumes into structured evidence. Job-description matching appears only when the hiring question requires it.",
     icon: FileSearch,
-    title: "Evidence before conclusions",
-    body: "NeuralRecruit exposes detected skills, section coverage, and scoring components so reviewers can inspect the basis of every result.",
+    items: [
+      {
+        title: "Resume intelligence",
+        description:
+          "Inspect document quality, sections, skills, experience evidence, improvements, and suitable IT role families without supplying a job description.",
+      },
+      {
+        title: "Optional job context",
+        description:
+          "Add a job description for one-to-one matching, candidate ranking, or role comparison while keeping supporting evidence visible.",
+      },
+      {
+        title: "Public showcase",
+        description:
+          "Explore the core workflows without creating an account. Candidate files are processed temporarily and scan history is disabled.",
+      },
+      {
+        title: "Source available",
+        description:
+          "The implementation is published on GitHub so reviewers can inspect the architecture, scoring path, safeguards, and documented limitations.",
+      },
+    ],
   },
   {
+    id: "architecture",
+    label: "Inspectable architecture",
+    title: "A transparent technical pipeline.",
+    body: "The system separates document extraction, terminology normalization, evidence comparison, and report presentation so important findings can be checked rather than merely accepted.",
+    icon: ServerCog,
+    items: [
+      {
+        title: "Web application",
+        description:
+          "React, TypeScript, TanStack Start, browser PDF extraction, and bounded optional OCR provide the interactive experience.",
+      },
+      {
+        title: "Analysis service",
+        description:
+          "FastAPI, TF-IDF and LSA, BM25, rule-based NLP, and a curated IT taxonomy power the evidence-processing path.",
+      },
+      {
+        title: "Review output",
+        description:
+          "Reports separate resume health, skill evidence, experience interpretation, role suggestions, and job alignment.",
+      },
+      {
+        title: "Deployment boundaries",
+        description:
+          "Vercel serves the frontend and Render hosts the analysis API. The public scoring path does not require a paid external LLM API.",
+      },
+    ],
+  },
+  {
+    id: "responsible-use",
+    label: "Project principles",
+    title: "Built to assist—not decide.",
+    body: "Hiring is consequential. NeuralRecruit organizes job-related evidence for a responsible human reviewer and clearly limits what its scores can mean.",
     icon: ShieldCheck,
-    title: "Temporary document processing",
-    body: "The public showcase processes candidate files temporarily and does not require a paid or external LLM inference API.",
-  },
-  {
-    icon: Scale,
-    title: "Human review is mandatory",
-    body: "Scores are advisory decision-support signals. They are not hiring decisions or predictions of a candidate's future performance.",
+    items: [
+      {
+        title: "Evidence before conclusions",
+        description:
+          "Detected skills, section context, experience findings, and scoring components stay visible for source verification.",
+      },
+      {
+        title: "Temporary processing",
+        description:
+          "The public showcase removes temporary uploads after extraction and does not persist candidate reports to scan history.",
+      },
+      {
+        title: "Human review is mandatory",
+        description:
+          "Scores are advisory decision-support signals, not hiring decisions or predictions of future job performance.",
+      },
+      {
+        title: "Questions are welcome",
+        description:
+          "The public issue tracker provides a direct place to report reproducible bugs, parsing concerns, and responsible-use feedback.",
+      },
+    ],
   },
 ] as const;
 
 function AboutPage() {
   return (
-    <main className="landing-shell project-page">
-      <div className="landing-ambient landing-ambient-one" aria-hidden="true" />
-
-      <header className="landing-nav">
-        <Link to="/" className="landing-brand" aria-label="NeuralRecruit home">
-          <span className="landing-brand-mark">
-            <Radar aria-hidden="true" />
-          </span>
-          <span>
-            <strong>NeuralRecruit</strong>
-            <small>Evidence-led hiring intelligence</small>
-          </span>
-        </Link>
-        <nav className="landing-nav-links" aria-label="Project navigation">
-          <a href="#purpose">Purpose</a>
-          <a href="#architecture">Architecture</a>
-          <a href="#responsible-use">Responsible use</a>
-        </nav>
-        <Link to="/" className="project-back-link">
-          <ArrowLeft aria-hidden="true" />
-          Back to showcase
-        </Link>
-      </header>
-
-      <article className="project-main">
-        <header className="project-hero" id="purpose">
-          <div className="landing-eyebrow">
-            <span aria-hidden="true" />
-            Source-available HR decision support
-          </div>
-          <h1>
-            About <span>NeuralRecruit.</span>
-          </h1>
-          <p>
-            NeuralRecruit is a source-available web application for HR teams and technical
-            recruiters. It turns resumes into structured, reviewable evidence and adds
-            job-description matching only when the hiring question requires it.
-          </p>
-          <div className="project-actions">
-            <Link to="/" className="landing-primary-cta">
-              Open the showcase
-              <ArrowRight aria-hidden="true" />
-            </Link>
-            <a href={GITHUB_URL} className="landing-secondary-cta">
-              <Github aria-hidden="true" />
-              View source
-            </a>
-          </div>
-          <p className="project-updated">
-            Project information reviewed <time dateTime="2026-07-31">July 31, 2026</time>
-          </p>
-        </header>
-
-        <section className="project-section" id="architecture" aria-labelledby="architecture-title">
-          <div className="project-section-heading">
-            <span>Inspectable by design</span>
-            <h2 id="architecture-title">A transparent technical pipeline.</h2>
-            <p>
-              The application combines deterministic parsing, an IT skill taxonomy, local retrieval,
-              and evidence-oriented scoring. The public deployment uses a React and TypeScript
-              frontend with a FastAPI analysis service.
-            </p>
-          </div>
-          <div className="project-architecture-grid">
-            <article>
-              <Braces aria-hidden="true" />
-              <h3>Web application</h3>
-              <p>React, TypeScript, TanStack Start, browser PDF extraction, and optional OCR.</p>
-            </article>
-            <article>
-              <ServerCog aria-hidden="true" />
-              <h3>Analysis service</h3>
-              <p>FastAPI, TF-IDF/LSA, BM25, rule-based NLP, and an IT-focused skill taxonomy.</p>
-            </article>
-            <article>
-              <FileSearch aria-hidden="true" />
-              <h3>Review output</h3>
-              <p>Resume health, evidence signals, role suggestions, and job-alignment reports.</p>
-            </article>
-          </div>
-        </section>
-
-        <section
-          className="project-section project-responsible"
-          id="responsible-use"
-          aria-labelledby="responsible-title"
-        >
-          <div className="project-section-heading">
-            <span>Responsible use</span>
-            <h2 id="responsible-title">Support the reviewer. Never replace them.</h2>
-          </div>
-          <div className="project-principle-grid">
-            {PRINCIPLES.map((principle) => (
-              <article key={principle.title}>
-                <principle.icon aria-hidden="true" />
-                <div>
-                  <h3>{principle.title}</h3>
-                  <p>{principle.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="project-source" aria-labelledby="source-title">
-          <div>
-            <span>Source and feedback</span>
-            <h2 id="source-title">Review the implementation.</h2>
-            <p>
-              The complete project is public on GitHub. Use GitHub Issues for technical questions,
-              reproducible bugs, or responsible feedback.
-            </p>
-          </div>
-          <div className="project-source-actions">
-            <a href={GITHUB_URL}>
-              <Github aria-hidden="true" />
-              GitHub repository
-            </a>
-            <a href={GITHUB_ISSUES_URL}>
-              Open an issue
-              <ArrowRight aria-hidden="true" />
-            </a>
-          </div>
-        </section>
-      </article>
-
-      <footer className="landing-footer project-footer">
-        <Link to="/" className="landing-brand" aria-label="NeuralRecruit home">
-          <span className="landing-brand-mark">
-            <Radar aria-hidden="true" />
-          </span>
-          <span>
-            <strong>NeuralRecruit</strong>
-            <small>HR decision-support showcase</small>
-          </span>
-        </Link>
-        <p>Source-available resume intelligence with mandatory human review.</p>
-        <div className="landing-footer-links">
-          <Link to="/">Showcase</Link>
-          <a href={GITHUB_URL}>Source</a>
-          <a href={GITHUB_ISSUES_URL}>Feedback</a>
-        </div>
-      </footer>
-    </main>
+    <PublicInfoPage
+      eyebrow="Source-available HR decision support"
+      title="About"
+      accent="NeuralRecruit."
+      intro="NeuralRecruit turns resumes into structured, reviewable evidence and adds job-description matching only when the hiring question requires it. It is designed for transparent technical recruiting—not automated employment decisions."
+      highlights={[
+        { label: "Purpose", value: "Explainable HR decision support" },
+        { label: "Architecture", value: "Source available and inspectable" },
+        { label: "Responsibility", value: "Mandatory human review" },
+      ]}
+      sections={SECTIONS}
+      closing={{
+        label: "Explore the product",
+        title: "Choose the right review workflow.",
+        body: "See how resume-only review, job matching, candidate ranking, and role comparison answer different technical hiring questions.",
+        primaryLabel: "Explore features",
+        primaryTo: "/features",
+      }}
+    />
   );
 }
