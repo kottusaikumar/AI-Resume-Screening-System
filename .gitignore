@@ -1,5 +1,6 @@
 # Local tool and dependency caches
 .agents/
+.codex/
 .bun-cache/
 .uv-audit-cache/
 .uv-cache/

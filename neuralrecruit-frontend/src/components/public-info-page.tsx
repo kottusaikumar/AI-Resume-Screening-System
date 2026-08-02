@@ -54,6 +54,9 @@ export function PublicInfoPage({
 
   return (
     <main className="landing-shell project-page knowledge-page">
+      <a className="landing-skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <div className="landing-ambient landing-ambient-one" aria-hidden="true" />
 
       <header className="landing-nav">
@@ -84,7 +87,7 @@ export function PublicInfoPage({
         </Link>
       </header>
 
-      <article className="project-main">
+      <article id="main-content" className="project-main" tabIndex={-1}>
         <header className="project-hero knowledge-hero">
           <div className="knowledge-hero-copy">
             <div className="landing-eyebrow">

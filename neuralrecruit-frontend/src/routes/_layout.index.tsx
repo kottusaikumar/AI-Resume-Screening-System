@@ -404,7 +404,8 @@ function UploadView({
     <div className="scanner-workspace space-y-8 lg:space-y-6">
       <div
         className="scanner-mode-switch glass grid gap-2 rounded-xl p-2 sm:grid-cols-2 lg:gap-1.5 lg:p-1.5"
-        role="tablist"
+        role="group"
+        aria-label="Analysis mode"
       >
         {[
           {
@@ -423,10 +424,9 @@ function UploadView({
           <button
             key={option.value}
             type="button"
-            role="tab"
-            aria-selected={mode === option.value}
+            aria-pressed={mode === option.value}
             onClick={() => setMode(option.value)}
-            className={`flex min-w-0 items-start gap-3 rounded-lg border p-4 text-left transition lg:p-3 ${
+            className={`flex min-w-0 items-start gap-3 rounded-lg border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 lg:p-3 ${
               mode === option.value
                 ? "border-primary/45 bg-primary/10 shadow-sm"
                 : "border-transparent hover:border-border hover:bg-surface-2/40"
@@ -474,7 +474,11 @@ function UploadView({
       </header>
 
       {displayError && (
-        <div className="glass rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
+        <div
+          className="glass rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3"
+          role="alert"
+          aria-live="assertive"
+        >
           <div className="size-9 rounded-md bg-destructive/15 border border-destructive/30 grid place-items-center shrink-0">
             <AlertTriangle className="size-4 text-destructive" />
           </div>
@@ -490,7 +494,7 @@ function UploadView({
               setFileError(null);
               onDismissError();
             }}
-            className="text-muted-foreground hover:text-foreground shrink-0"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/60"
             aria-label="Dismiss"
           >
             <X className="size-4" />
@@ -523,7 +527,7 @@ function UploadView({
               setDrag(false);
               handleFile(e.dataTransfer.files?.[0]);
             }}
-            className={`relative block rounded-lg border-2 border-dashed transition cursor-pointer ${
+            className={`relative block cursor-pointer rounded-lg border-2 border-dashed transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/60 has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background ${
               drag
                 ? "border-primary bg-primary/10"
                 : "border-border hover:border-primary/50 hover:bg-surface-2/40"
@@ -533,6 +537,7 @@ function UploadView({
               type="file"
               accept=".pdf,.docx,.txt"
               className="sr-only"
+              aria-label="Upload candidate resume"
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
             <div className="scanner-dropzone px-6 py-12 flex flex-col items-center text-center gap-4">
@@ -603,12 +608,15 @@ function UploadView({
                 <div className="size-9 rounded-md bg-success/15 border border-success/30 grid place-items-center">
                   <Briefcase className="size-4 text-success" />
                 </div>
-                <h2 className="font-display font-semibold text-lg">Job Description</h2>
+                <h2 id="job-description-label" className="font-display font-semibold text-lg">
+                  Job Description
+                </h2>
               </div>
               <span className="font-mono-label text-muted-foreground">AUTO-DETECT: ON</span>
             </div>
 
             <textarea
+              aria-labelledby="job-description-label"
               value={jd}
               onChange={(e) => setJd(e.target.value)}
               placeholder="Paste the target role brief — key responsibilities, technical competencies, leadership requirements, and cultural expectations for the highest match precision…"
@@ -620,8 +628,9 @@ function UploadView({
               {TEMPLATES.map((t) => (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setJd(seedJD(t))}
-                  className="px-3 py-1.5 rounded-full text-xs border border-border bg-surface-2/40 hover:border-primary/50 hover:text-primary-glow transition"
+                  className="rounded-full border border-border bg-surface-2/40 px-3 py-1.5 text-xs transition hover:border-primary/50 hover:text-primary-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   {t}
                 </button>
@@ -698,7 +707,7 @@ function UploadView({
           >
             <Cpu className="size-5" />
           </div>
-          <div>
+          <div id="analysis-readiness" role="status" aria-live="polite">
             <div className="font-display font-semibold">
               {canRun ? "Ready to scan" : "Awaiting inputs"}
             </div>
@@ -713,11 +722,13 @@ function UploadView({
           </div>
         </div>
         <button
+          type="button"
           disabled={!canRun}
           onClick={onRun}
+          aria-describedby="analysis-readiness"
           className={`inline-flex items-center gap-2 px-6 h-12 lg:px-5 lg:h-11 rounded-md font-semibold transition ${
             canRun
-              ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground glow-primary hover:scale-[1.02]"
+              ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground glow-primary hover:scale-[1.02] motion-reduce:hover:scale-100"
               : "bg-surface-2/40 text-muted-foreground border border-border cursor-not-allowed"
           }`}
         >

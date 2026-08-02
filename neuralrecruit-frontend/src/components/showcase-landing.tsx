@@ -113,7 +113,10 @@ const FAQ = [
 
 export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
   return (
-    <main className="landing-shell">
+    <main id="top" className="landing-shell">
+      <a className="landing-skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <div className="landing-ambient landing-ambient-one" aria-hidden="true" />
       <div className="landing-ambient landing-ambient-two" aria-hidden="true" />
 
@@ -139,7 +142,7 @@ export function ShowcaseLanding({ onEnter }: { onEnter: () => void }) {
         </button>
       </header>
 
-      <section id="top" className="landing-hero">
+      <section id="main-content" className="landing-hero" tabIndex={-1}>
         <div className="landing-hero-copy">
           <div className="landing-eyebrow">
             <span aria-hidden="true" />

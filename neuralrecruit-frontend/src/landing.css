@@ -117,6 +117,38 @@
   height: 20px;
 }
 
+.landing-skip-link {
+  position: fixed;
+  z-index: 200;
+  top: 12px;
+  left: 12px;
+  padding: 10px 14px;
+  color: #061006;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  border-radius: 10px;
+  background: var(--landing-lime);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  transform: translateY(calc(-100% - 20px));
+  transition: transform 160ms ease;
+}
+
+.landing-skip-link:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+  transform: translateY(0);
+}
+
+.landing-shell :where(a, button, summary):focus-visible {
+  outline: 2px solid var(--landing-lime);
+  outline-offset: 4px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
 .landing-nav-links {
   display: flex;
   align-items: center;
@@ -1279,9 +1311,25 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing-shell,
+  .landing-shell *,
+  .landing-shell *::before,
+  .landing-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
   .landing-scan-beam,
   .landing-loader-ring {
     animation: none;
+  }
+
+  .landing-primary-cta:hover,
+  .landing-nav-links a:hover,
+  .landing-mode-grid article:hover,
+  .project-back-link:hover {
+    transform: none;
   }
 
   .landing-scan-beam {
