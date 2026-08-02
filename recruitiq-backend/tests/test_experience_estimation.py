@@ -3,11 +3,124 @@ import datetime
 import pytest
 
 from app.core.resume_analyzer import (
+    analyze_sections,
     analyze_detailed_resume,
     _extract_experience_intervals,
     _merged_month_count,
+    detect_ocr_section_hints,
     estimate_experience,
+    restore_ocr_summary_heading,
 )
+
+
+def test_ocr_summary_fallback_restores_only_opening_narrative():
+    ocr_text = """
+Mohith Kopuri
+mohith@example.com | github.com/mohith
+
+Data science graduate with strong experience building machine learning and
+analytics projects using Python, Pandas, SQL, and TensorFlow. Passionate about
+turning complex datasets into clear insights and practical software solutions.
+
+EDUCATION
+Bachelor of Technology in Computer Science
+
+SKILLS
+Python, SQL, Pandas, TensorFlow
+
+PROJECTS
+Customer churn prediction platform
+"""
+
+    restored = restore_ocr_summary_heading(ocr_text)
+    sections = analyze_sections(restored)
+
+    assert "\nSUMMARY\n" in restored
+    assert sections.has_summary is True
+    assert sections.has_experience is False
+    assert sections.has_education is True
+    assert sections.has_skills is True
+    assert sections.has_projects is True
+
+
+def test_ocr_summary_fallback_accepts_merged_two_column_heading_boundary():
+    ocr_text = """
+4917095325479
+MOHITH KOPURI mohithkopuriggmailcom
+Hyderabad, Telangana
+ee >) >.
+Motivated and detail-driven Computer Science graduate with a strong foundation
+in data science, machine learning, and statistical analysis. Experienced in
+working with large datasets and developing predictive models using Python and
+SQL. Seeking an opportunity to contribute in a professional environment.
+EDUCATION PERSONAL PROJECTS
+Narasaraopeta Institute of Technology Course Completion Predictor
+2020-2024
+SKILLS Enabled proactive interventions for students at risk
+Python programming
+CERTIFICATIONS using Python
+Artificial Intelligence certificate
+"""
+
+    restored = restore_ocr_summary_heading(ocr_text)
+    hints = detect_ocr_section_hints(restored)
+    sections = analyze_sections(restored, inferred_sections=hints)
+
+    assert "\nSUMMARY\nMotivated" in restored
+    assert sections.has_summary is True
+    assert sections.has_experience is False
+    assert sections.has_education is True
+    assert sections.has_skills is True
+    assert sections.has_projects is True
+    assert sections.has_certifications is True
+    assert sections.completeness_score == pytest.approx(83.3)
+
+
+def test_ocr_section_hints_do_not_treat_experienced_prose_as_experience():
+    ocr_text = """
+SUMMARY
+Experienced in working with large datasets and predictive models.
+EDUCATION PERSONAL PROJECTS
+Bachelor of Technology
+SKILLS Enabled proactive interventions for students
+Python and SQL
+CERTIFICATIONS using Python
+Artificial Intelligence certificate
+"""
+
+    hints = detect_ocr_section_hints(ocr_text)
+
+    assert hints == {"education", "skills", "projects", "certifications"}
+    assert "experience" not in hints
+
+
+@pytest.mark.parametrize(
+    "ocr_text",
+    [
+        """
+Mohith Kopuri
+mohith@example.com
+Python, SQL, Pandas, TensorFlow, Keras, HTML, CSS, MySQL
+SKILLS
+Python, SQL, Pandas
+""",
+        """
+Mohith Kopuri
+mohith@example.com
+Built a machine learning project.
+PROJECTS
+Customer churn prediction
+""",
+        """
+Mohith Kopuri
+mohith@example.com
+Experienced data analyst creating dashboards and predictive models for
+business teams with Python and SQL. Skilled at communicating useful insights.
+""",
+    ],
+)
+def test_ocr_summary_fallback_rejects_weak_or_unbounded_opening_text(ocr_text):
+    assert restore_ocr_summary_heading(ocr_text) == ocr_text
 
 
 def test_month_level_internships_ignore_certification_date():

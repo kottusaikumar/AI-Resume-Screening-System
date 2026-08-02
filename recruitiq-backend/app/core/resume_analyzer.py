@@ -69,6 +69,139 @@ SECTION_PATTERNS: Dict[str, re.Pattern] = {
         r"side.?projects?|personal\s*projects?)\s*:?", re.I),
 }
 
+_OCR_SUMMARY_PROFILE_TERMS = re.compile(
+    r"\b(?:professional|engineer|developer|analyst|scientist|specialist|"
+    r"student|graduate|fresher|experienced|experience|expertise|background|"
+    r"proficient|skilled|seeking|passionate|results?[-\s]driven|"
+    r"detail[-\s]oriented|career)\b",
+    re.I,
+)
+_OCR_CONTACT_LINE = re.compile(
+    r"(?:@|https?://|www\.|linkedin\.com|github\.com|"
+    r"\+?\d[\d\s().-]{7,}\d)",
+    re.I,
+)
+_OCR_SECTION_BOUNDARY = re.compile(
+    r"^\s*(?P<heading>education|academic\s+(?:background|qualifications?)|"
+    r"skills?|technical\s+skills?|core\s+competencies|technologies|"
+    r"certifications?|certificates?|projects?|personal\s+projects?|"
+    r"professional\s+experience|work\s+history|employment\s+history)\b",
+    re.I,
+)
+_OCR_SECTION_HINTS = re.compile(
+    r"\b(?P<heading>PERSONAL\s+PROJECTS|PROFESSIONAL\s+EXPERIENCE|"
+    r"WORK\s+HISTORY|EMPLOYMENT\s+HISTORY|EDUCATION|SKILLS|"
+    r"CERTIFICATIONS|PROJECTS|EXPERIENCE)\b"
+)
+_OCR_SECTION_HINT_MAP = {
+    "personal projects": "projects",
+    "professional experience": "experience",
+    "work history": "experience",
+    "employment history": "experience",
+    "education": "education",
+    "skills": "skills",
+    "certifications": "certifications",
+    "projects": "projects",
+    "experience": "experience",
+}
+
+
+def _is_strong_ocr_section_boundary(line: str) -> bool:
+    """Recognize an uppercase OCR heading even when column text follows it."""
+    match = _OCR_SECTION_BOUNDARY.match(line)
+    if not match:
+        return False
+    heading = match.group("heading")
+    return heading == heading.upper()
+
+
+def detect_ocr_section_hints(text: str) -> Set[str]:
+    """Return only section headings explicitly visible in browser OCR text.
+
+    Two-column resumes commonly merge a heading with adjacent-column text,
+    preventing strict full-line matching. Uppercase matches remain strong
+    heading evidence, but they are presence hints only: no section body or
+    employment history is invented from them.
+    """
+    hints: Set[str] = set()
+    for line in text.splitlines():
+        for match in _OCR_SECTION_HINTS.finditer(line):
+            heading = re.sub(r"\s+", " ", match.group("heading")).strip().lower()
+            section_name = _OCR_SECTION_HINT_MAP.get(heading)
+            if section_name:
+                hints.add(section_name)
+    return hints
+
+
+def restore_ocr_summary_heading(text: str) -> str:
+    """Restore a missing SUMMARY label for a strong OCR opening narrative.
+
+    Normal section extraction remains strict. This helper is called only at
+    the browser-OCR upload boundary, adds at most the summary heading, and
+    never infers experience or any other resume section.
+    """
+    if not text.strip() or any(
+        SECTION_PATTERNS["summary"].fullmatch(line.strip())
+        for line in text.splitlines()
+    ):
+        return text
+
+    lines = text.splitlines()
+    first_section_index: Optional[int] = None
+    for index, raw_line in enumerate(lines):
+        heading = raw_line.strip()
+        if any(pattern.fullmatch(heading) for pattern in SECTION_PATTERNS.values()) or (
+            _is_strong_ocr_section_boundary(heading)
+        ):
+            first_section_index = index
+            break
+
+    # A reliable opening profile needs a later explicit section as its lower
+    # boundary. This avoids converting arbitrary OCR prose into a section.
+    if first_section_index is None or first_section_index < 2:
+        return text
+
+    candidate_start: Optional[int] = None
+    candidate_lines: List[str] = []
+    for index, raw_line in enumerate(lines[:first_section_index]):
+        line = re.sub(r"\s+", " ", raw_line).strip()
+        if not line:
+            if candidate_lines:
+                break
+            continue
+        if _OCR_CONTACT_LINE.search(line):
+            if candidate_lines:
+                break
+            continue
+
+        words = re.findall(r"[A-Za-z][A-Za-z'+.-]*", line)
+        # Skip names and other short header fragments before the narrative.
+        if len(words) < 6:
+            if candidate_lines:
+                break
+            continue
+        if candidate_start is None:
+            candidate_start = index
+        candidate_lines.append(line)
+
+    if candidate_start is None or not candidate_lines:
+        return text
+
+    narrative = " ".join(candidate_lines)
+    word_count = len(re.findall(r"\b[A-Za-z][A-Za-z'-]*\b", narrative))
+    if (
+        word_count < 18
+        or word_count > 140
+        or not re.search(r"[.!?](?:\s|$)", narrative)
+        or not _OCR_SUMMARY_PROFILE_TERMS.search(narrative)
+    ):
+        return text
+
+    restored = list(lines)
+    restored.insert(candidate_start, "SUMMARY")
+    return "\n".join(restored)
+
+
 # ---------------------------------------------------------------------------
 # FIX 1: Universal bullet pattern — catches ALL formats
 # Handles: • - * – — ▪ ► ▸ ○ ● ✓ ✔ numbered lists, AND plain action-verb lines
@@ -528,9 +661,15 @@ def _extract_sections_raw(text: str) -> Dict[str, str]:
 
     return extracted_sections
 
-def analyze_sections(text: str) -> SectionAnalysis:
+def analyze_sections(
+    text: str,
+    inferred_sections: Optional[Set[str]] = None,
+) -> SectionAnalysis:
     extracted_sections = _extract_sections_raw(text)
     found = {k: bool(v) for k, v in extracted_sections.items()}
+    for section_name in inferred_sections or set():
+        if section_name in SECTION_PATTERNS:
+            found[section_name] = True
     present = sum(found.values())
     completeness = round((present / len(SECTION_PATTERNS)) * 100, 1)
     return SectionAnalysis(

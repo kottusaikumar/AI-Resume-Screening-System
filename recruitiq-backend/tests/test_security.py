@@ -176,6 +176,87 @@ def test_resume_review_accepts_browser_ocr_for_validated_pdf(client: TestClient)
     assert any(skill.lower() == "python" for skill in result["extracted_skills"])
 
 
+def test_resume_review_recovers_missing_ocr_summary_without_inventing_experience(
+    client: TestClient,
+):
+    headers = _login(client)
+    document = fitz.open()
+    document.new_page()
+    pdf_bytes = document.tobytes()
+    document.close()
+    browser_text = """
+    Mohith Kopuri
+    mohith@example.com | github.com/mohith
+
+    Data science graduate with strong experience building machine learning and
+    analytics projects using Python, Pandas, SQL, and TensorFlow. Passionate about
+    turning complex datasets into clear insights and practical software solutions.
+
+    EDUCATION
+    Bachelor of Technology in Computer Science
+
+    SKILLS
+    Python, SQL, Pandas, TensorFlow
+
+    PROJECTS
+    Customer churn prediction platform
+    """
+
+    response = client.post(
+        "/api/review-resume",
+        headers=headers,
+        files={"resume": ("scanned-candidate.pdf", pdf_bytes, "application/pdf")},
+        data={"blind_mode": "false", "browser_extracted_text": browser_text},
+    )
+
+    assert response.status_code == 200
+    sections = response.json()["section_analysis"]
+    assert sections["has_summary"] is True
+    assert sections["has_experience"] is False
+
+
+def test_resume_review_recovers_explicit_merged_ocr_section_headings(
+    client: TestClient,
+):
+    headers = _login(client)
+    document = fitz.open()
+    document.new_page()
+    pdf_bytes = document.tobytes()
+    document.close()
+    browser_text = """
+    Mohith Kopuri
+    mohith@example.com
+    Motivated Computer Science graduate with a strong foundation in data science
+    and machine learning. Experienced with large datasets and predictive models.
+    Seeking an opportunity to contribute and grow in a professional environment.
+    EDUCATION PERSONAL PROJECTS
+    Bachelor of Technology Course Completion Predictor
+    SKILLS Enabled proactive interventions for students
+    Python, SQL, Pandas, TensorFlow
+    CERTIFICATIONS using Python
+    Artificial Intelligence certificate
+    """
+
+    response = client.post(
+        "/api/review-resume",
+        headers=headers,
+        files={"resume": ("two-column-scan.pdf", pdf_bytes, "application/pdf")},
+        data={"blind_mode": "false", "browser_extracted_text": browser_text},
+    )
+
+    assert response.status_code == 200
+    sections = response.json()["section_analysis"]
+    assert sections == {
+        "has_summary": True,
+        "has_experience": False,
+        "has_education": True,
+        "has_skills": True,
+        "has_certifications": True,
+        "has_projects": True,
+        "completeness_score": pytest.approx(83.3),
+    }
+
+
 def test_multi_role_comparison_requires_valid_role_list(client: TestClient):
     headers = _login(client)
     invalid_json = client.post(

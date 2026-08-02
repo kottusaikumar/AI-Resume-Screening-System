@@ -82,6 +82,8 @@ from app.core.resume_analyzer import (
     estimate_experience,
     detect_mandatory_skills,
     analyze_detailed_resume,
+    detect_ocr_section_hints,
+    restore_ocr_summary_heading,
 )
 from app.models.schemas import (
     CreateUserRequest, DetailedResumeAnalysis, LoginRequest, LoginResponse,
@@ -516,7 +518,7 @@ async def _extract_uploaded_resume_text(
                 raise UnsafeUploadError(
                     "Browser OCR did not extract enough readable resume text."
                 )
-            return supplied_text
+            return restore_ocr_summary_heading(supplied_text)
         # Native extraction is fast, but scanned-PDF OCR is CPU intensive.
         # Keep both off the async event loop so other API requests stay responsive.
         # The public showcase delegates scanned-PDF OCR to the browser so a
@@ -544,10 +546,15 @@ def _run_resume_review(
     resume_filename: str,
     start_time: float,
     blind_mode: bool = False,
+    browser_ocr: bool = False,
 ) -> ResumeReviewResponse:
     """Build a JD-independent resume review without producing a match score."""
     analysis_text = redact_pii(resume_text) if blind_mode else resume_text
-    section_analysis = analyze_sections(analysis_text)
+    ocr_section_hints = detect_ocr_section_hints(analysis_text) if browser_ocr else set()
+    section_analysis = analyze_sections(
+        analysis_text,
+        inferred_sections=ocr_section_hints,
+    )
     resume_quality = analyze_quality(analysis_text)
     experience_info = estimate_experience(analysis_text)
     detailed_analysis = analyze_detailed_resume(analysis_text)
@@ -659,6 +666,7 @@ async def review_resume(
         resume_filename=safe_filename,
         start_time=start_time,
         blind_mode=blind_mode,
+        browser_ocr=bool(browser_extracted_text.strip()),
     )
 
 
