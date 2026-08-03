@@ -157,7 +157,12 @@ def identify_strengths(
     if quality.quantified_bullets >= 3:
         strengths.append("Multiple achievements include measurable evidence.")
     if quality.action_verb_count >= 4:
-        strengths.append("Experience bullets make consistent use of action-oriented language.")
+        if sections.has_experience:
+            strengths.append("Experience bullets make consistent use of action-oriented language.")
+        elif sections.has_projects:
+            strengths.append("Project bullets make consistent use of action-oriented language.")
+        else:
+            strengths.append("Achievement statements make consistent use of action-oriented language.")
     if len(detailed.sections.skills) >= 6:
         strengths.append("The resume provides a broad, explicitly stated skill set.")
     if experience.estimated_years >= 3:
@@ -175,9 +180,14 @@ def build_review_summary(
     experience: ExperienceInfo,
     skill_count: int,
 ) -> str:
+    experience_summary = (
+        f"{experience.estimated_years:.1f} estimated years of dated experience"
+        if experience.estimated_years > 0
+        else "no dated professional work history detected"
+    )
     return (
         f"The resume was parsed as a {experience.seniority_level.lower()} profile with "
-        f"{experience.estimated_years:.1f} estimated years of dated experience and "
+        f"{experience_summary} and "
         f"{skill_count} explicitly detected skills. Core-section completeness is "
         f"{sections.completeness_score:.0f}% and ATS readability is "
         f"{quality.ats_format_score:.0f}%. These are resume-quality signals, not a "

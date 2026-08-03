@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import mammoth from "mammoth";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -244,8 +246,7 @@ function PdfPagePreview({
 }
 
 async function buildDocxBlocks(file: File) {
-  const mammothModule = await import("mammoth");
-  const result = await mammothModule.default.convertToHtml(
+  const result = await mammoth.convertToHtml(
     { arrayBuffer: await file.arrayBuffer() },
     {
       includeDefaultStyleMap: true,
@@ -489,10 +490,7 @@ export function ResumeAnnotationViewer({ file }: { file: File | null }) {
         }
 
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
         loadingTask = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
         loadedPdf = await loadingTask.promise;
         if (cancelled) {

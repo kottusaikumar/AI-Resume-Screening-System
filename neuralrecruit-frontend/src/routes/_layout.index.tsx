@@ -1451,7 +1451,11 @@ function ResumeReviewView({
             <MiniStat label="Word Count" value={`${result.resume_quality.word_count}`} />
             <MiniStat
               label="Experience"
-              value={`${result.experience_info.estimated_years.toFixed(1)} years`}
+              value={
+                result.experience_info.estimated_years > 0
+                  ? `${result.experience_info.estimated_years.toFixed(1)} years`
+                  : "No dated roles"
+              }
             />
           </div>
         </section>

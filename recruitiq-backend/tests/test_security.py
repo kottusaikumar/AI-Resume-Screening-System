@@ -146,6 +146,44 @@ def test_resume_review_does_not_require_or_invent_job_match(client: TestClient):
     assert result["suggested_roles"]
 
 
+def test_resume_review_labels_project_evidence_without_inventing_work_history(
+    client: TestClient,
+):
+    headers = _login(client)
+    resume = b"""
+    SUMMARY
+    Entry-level data analyst focused on dashboard reporting and data cleaning.
+
+    SKILLS
+    Python, SQL, Excel, Power BI, Tableau, pandas
+
+    PROJECTS
+    Sales Dashboard
+    - Cleaned a 9,000-row sales dataset and removed duplicate records.
+    - Built an interactive Power BI dashboard for sales reporting.
+    - Identified top-performing products and regional revenue trends.
+    - Automated recurring data preparation with Python and SQL.
+
+    EDUCATION
+    Master of Computer Applications, 2023
+    """
+    response = client.post(
+        "/api/review-resume",
+        headers=headers,
+        files={"resume": ("candidate.txt", resume, "text/plain")},
+        data={"blind_mode": "true"},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["experience_info"]["estimated_years"] == 0.0
+    assert "no dated professional work history detected" in result["review_summary"]
+    assert (
+        "Project bullets make consistent use of action-oriented language."
+        in result["strengths"]
+    )
+    assert not any(item.startswith("Experience bullets") for item in result["strengths"])
+
+
 def test_resume_review_accepts_browser_ocr_for_validated_pdf(client: TestClient):
     headers = _login(client)
     document = fitz.open()

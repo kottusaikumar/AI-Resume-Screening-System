@@ -1,3 +1,5 @@
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
 const MAX_OCR_PAGES = 2;
 const OCR_RENDER_SCALE = 96 / 72;
 const MAX_PIXELS_PER_PAGE = 6_000_000;
@@ -32,10 +34,7 @@ export async function extractScannedPdfText(
   onProgress?.({ message: "Checking whether this PDF contains searchable text…" });
 
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString();
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
