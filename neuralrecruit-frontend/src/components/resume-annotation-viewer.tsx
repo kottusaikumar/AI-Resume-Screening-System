@@ -734,7 +734,7 @@ export function ResumeAnnotationViewer({ file }: { file: File | null }) {
             )}
           </div>
 
-          <aside className="flex min-w-0 flex-col bg-surface/25 p-4 sm:p-5 lg:min-h-0 lg:overflow-hidden">
+          <aside className="flex min-w-0 flex-col overflow-visible bg-surface/25 p-4 sm:p-5 lg:min-h-0 lg:overflow-hidden">
             <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-4">
               <div>
                 <div className="flex items-center gap-2 font-mono-label text-primary-glow">
@@ -779,7 +779,7 @@ export function ResumeAnnotationViewer({ file }: { file: File | null }) {
               />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin]">
+            <div className="min-h-0 flex-1 overflow-visible overscroll-auto pr-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin]">
               {selected ? (
                 <div className="mt-4 overflow-hidden rounded-xl border border-primary/25 bg-[linear-gradient(145deg,hsl(var(--primary)/0.09),transparent_48%)] shadow-[0_18px_50px_-35px_hsl(var(--primary)/0.5)]">
                   <div className="h-1 bg-gradient-to-r from-primary via-primary-glow to-transparent" />
