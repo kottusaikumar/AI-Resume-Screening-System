@@ -143,6 +143,27 @@ class SuggestedRole(BaseModel):
     evidence_count: int = 0
 
 
+class ResumeDiagnostic(BaseModel):
+    key: str
+    category: str
+    severity: str
+    title: str
+    detail: str
+    recommendation: str
+    passed: bool = False
+
+
+class ATSCompatibilityProfile(BaseModel):
+    key: str
+    name: str
+    score: float
+    label: str
+    description: str
+    checks_passed: int
+    checks_total: int
+    diagnostics: List[ResumeDiagnostic] = Field(default_factory=list)
+
+
 class ResumeReviewResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
@@ -159,6 +180,12 @@ class ResumeReviewResponse(BaseModel):
     strengths: List[str] = Field(default_factory=list)
     recommendations: List[str] = Field(default_factory=list)
     suggested_roles: List[SuggestedRole] = Field(default_factory=list)
+    formatting_diagnostics: List[ResumeDiagnostic] = Field(default_factory=list)
+    ats_compatibility_profiles: List[ATSCompatibilityProfile] = Field(default_factory=list)
+    ats_compatibility_disclaimer: str = (
+        "Compatibility profiles are deterministic, public-behavior-oriented checks. "
+        "They are not official scores from, or guarantees about, any ATS vendor."
+    )
     review_summary: str
     processing_time_seconds: float = 0.0
     analyzer_name: str = "Deterministic Resume Analyzer"

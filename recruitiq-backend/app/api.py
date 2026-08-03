@@ -50,6 +50,7 @@ from app.core.nlp_utils import clean_text_for_embedding, extract_jd_keywords
 from app.core.pii_redaction import redact_pii
 from app.core.recommendations import generate_recommendations
 from app.core.resume_review import build_review_summary, identify_strengths, suggest_roles
+from app.core.ats_compatibility import analyze_ats_compatibility
 from app.core.scoring import calculate_match_score, DEFAULT_WEIGHTS
 from app.core.pdf_report import generate_report_pdf
 from app.core import storage
@@ -573,6 +574,16 @@ def _run_resume_review(
         experience_info=experience_info,
         mandatory_missing=[],
     )
+    formatting_diagnostics, ats_compatibility_profiles = analyze_ats_compatibility(
+        # Contact-field presence is a document-compatibility signal. Inspect
+        # the original text here so blind screening does not create false
+        # "missing contact" warnings; diagnostics expose only booleans and
+        # fixed guidance, never the contact values themselves.
+        resume_text,
+        section_analysis,
+        resume_quality,
+        experience_info,
+    )
     health_score = round(
         (
             resume_quality.quality_score
@@ -602,6 +613,8 @@ def _run_resume_review(
         ),
         recommendations=recommendations,
         suggested_roles=suggest_roles(extracted_skills),
+        formatting_diagnostics=formatting_diagnostics,
+        ats_compatibility_profiles=ats_compatibility_profiles,
         review_summary=build_review_summary(
             section_analysis,
             resume_quality,

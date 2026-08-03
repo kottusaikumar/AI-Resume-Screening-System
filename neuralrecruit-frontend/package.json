@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "test:evidence": "node --experimental-strip-types scripts/verify-resume-evidence.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write ."
@@ -55,6 +56,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.12.0",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.2.8",
     "react-day-picker": "^9.14.0",

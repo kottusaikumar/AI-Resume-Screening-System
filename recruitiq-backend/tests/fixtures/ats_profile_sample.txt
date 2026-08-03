@@ -1,0 +1,21 @@
+JANE CANDIDATE
+jane.candidate@example.com | +91 98765 43210 | linkedin.com/in/jane-candidate
+
+PROFESSIONAL SUMMARY
+Backend engineer focused on reliable APIs, data services, and deployment automation.
+
+EXPERIENCE
+Software Engineer | Example Systems | January 2022 - Present
+- Built Python and FastAPI services that reduced processing latency by 35 percent.
+- Automated deployment checks across 12 services and improved release reliability.
+- Led database performance improvements for a platform serving 40,000 users.
+
+EDUCATION
+Bachelor of Technology in Computer Science | Example University | 2021
+
+TECHNICAL SKILLS
+Python, FastAPI, SQL, PostgreSQL, Docker, Git, REST API, Linux
+
+PROJECTS
+Monitoring Dashboard
+- Created a service health dashboard and alerting workflow for distributed APIs.

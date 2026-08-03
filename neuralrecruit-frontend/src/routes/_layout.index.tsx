@@ -34,6 +34,7 @@ import { useScanner, useExport } from "@/lib/scanner-context";
 import { useAuth } from "@/lib/auth-context";
 import { extractScannedPdfText } from "@/lib/browser-ocr";
 import { downloadCsv } from "@/lib/csv";
+import { ResumeAnnotationViewer } from "@/components/resume-annotation-viewer";
 
 export const Route = createFileRoute("/_layout/")({
   head: () => ({
@@ -332,6 +333,7 @@ function ScannerPage() {
         <ResumeReviewView
           result={reviewResult}
           fileName={fileName}
+          file={file}
           onNewScan={() => {
             setReviewResult(null);
             setPhase("upload");
@@ -1368,12 +1370,26 @@ export function ResultsView({
 function ResumeReviewView({
   result,
   fileName,
+  file,
   onNewScan,
 }: {
   result: ResumeReviewResult;
   fileName: string | null;
+  file: File | null;
   onNewScan: () => void;
 }) {
+  const [selectedAtsKey, setSelectedAtsKey] = useState(
+    result.ats_compatibility_profiles?.[0]?.key ?? "",
+  );
+  const selectedAts =
+    result.ats_compatibility_profiles?.find((profile) => profile.key === selectedAtsKey) ??
+    result.ats_compatibility_profiles?.[0];
+  const averageAtsCompatibility = result.ats_compatibility_profiles?.length
+    ? Math.round(
+        result.ats_compatibility_profiles.reduce((total, profile) => total + profile.score, 0) /
+          result.ats_compatibility_profiles.length,
+      )
+    : 0;
   const sectionItems = [
     ["Summary", result.section_analysis.has_summary],
     ["Experience", result.section_analysis.has_experience],
@@ -1466,6 +1482,282 @@ function ResumeReviewView({
           </div>
         </section>
       </div>
+
+      <ResumeAnnotationViewer file={file} />
+
+      {result.ats_compatibility_profiles?.length > 0 && (
+        <section className="glass relative overflow-hidden rounded-2xl border-primary/20">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_80%_0%,hsl(var(--primary)/0.12),transparent_52%)]" />
+          <div className="relative grid gap-6 border-b border-border/80 p-6 md:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2 font-mono-label text-primary-glow">
+                <span className="size-1.5 rounded-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
+                ATS COMPATIBILITY MATRIX
+              </div>
+              <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight md:text-3xl">
+                See where this resume parses cleanly.
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Six ATS-oriented profiles inspect the same resume evidence with different
+                priorities. Choose a profile to understand its strengths and open risks.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-3 py-1.5 font-mono-label text-primary-glow">
+                  <ShieldCheck className="size-3.5" />
+                  Deterministic checks
+                </span>
+                <span className="inline-flex items-center rounded-full border border-success/20 bg-success/[0.06] px-3 py-1.5 font-mono-label text-success">
+                  Zero LLM API cost
+                </span>
+              </div>
+            </div>
+            <div className="flex items-stretch gap-2">
+              <div className="min-w-28 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3">
+                <div className="font-mono-label text-muted-foreground">Average</div>
+                <div className="mt-1 font-mono text-2xl font-bold text-primary-glow">
+                  {averageAtsCompatibility}
+                  <span className="ml-0.5 text-xs text-muted-foreground">/100</span>
+                </div>
+              </div>
+              <div className="min-w-28 rounded-xl border border-border bg-surface-2/55 px-4 py-3">
+                <div className="font-mono-label text-muted-foreground">Open risks</div>
+                <div className="mt-1 font-mono text-2xl font-bold text-foreground">
+                  {result.formatting_diagnostics?.length ?? 0}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="relative grid gap-3 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 xl:grid-cols-6"
+            role="group"
+            aria-label="ATS compatibility profiles"
+          >
+            {result.ats_compatibility_profiles.map((profile, index) => {
+              const selected = profile.key === selectedAts?.key;
+              const scoreTone =
+                profile.score >= 70
+                  ? "text-success"
+                  : profile.score >= 50
+                    ? "text-warning"
+                    : "text-destructive";
+              const scoreBar =
+                profile.score >= 70
+                  ? "bg-gradient-to-r from-primary to-primary-glow"
+                  : profile.score >= 50
+                    ? "bg-gradient-to-r from-amber-500 to-warning"
+                    : "bg-gradient-to-r from-red-600 to-destructive";
+              return (
+                <button
+                  type="button"
+                  key={profile.key}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedAtsKey(profile.key)}
+                  className={`group relative min-h-44 min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    selected
+                      ? "-translate-y-0.5 border-primary/50 bg-primary/[0.09] shadow-[0_16px_36px_-24px_hsl(var(--primary)/0.75)]"
+                      : "border-border/80 bg-surface-2/45 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-surface-2/80"
+                  }`}
+                >
+                  {selected && (
+                    <span className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono-label text-muted-foreground">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.14em] transition ${
+                        selected
+                          ? "border-primary/35 bg-primary/10 text-primary-glow"
+                          : "border-border/70 text-muted-foreground/70 group-hover:border-primary/20"
+                      }`}
+                    >
+                      {selected ? "Selected" : "Profile"}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-end justify-between gap-2">
+                      <div className="flex items-baseline gap-1">
+                        <span
+                          className={`font-mono text-3xl font-semibold tracking-tight ${scoreTone}`}
+                        >
+                          {Math.round(profile.score)}
+                        </span>
+                        <span className="font-mono text-[9px] text-muted-foreground">/100</span>
+                      </div>
+                      <span className="font-mono-label text-muted-foreground">Score</span>
+                    </div>
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-border/70">
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-500 ${scoreBar}`}
+                        style={{ width: `${Math.max(4, Math.min(profile.score, 100))}%` }}
+                      />
+                    </div>
+                    <span className="mt-4 block min-h-8 min-w-0 break-words font-display text-[13px] font-semibold leading-tight [overflow-wrap:anywhere]">
+                      {profile.name}
+                    </span>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
+                    <span className="font-mono-label text-muted-foreground">Checks</span>
+                    <span className={`font-mono text-xs font-semibold ${scoreTone}`}>
+                      {profile.checks_passed}/{profile.checks_total} passed
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedAts && (
+            <div className="relative border-t border-border/80 bg-[linear-gradient(135deg,hsl(var(--surface-2)/0.55),transparent_60%)] p-4 sm:p-6 md:p-8">
+              <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.045] p-5 md:p-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-11 place-items-center rounded-lg border border-primary/30 bg-primary/10 shadow-[0_0_24px_-12px_hsl(var(--primary))]">
+                        <Gauge className="size-5 text-primary-glow" />
+                      </div>
+                      <div>
+                        <div className="font-mono-label text-muted-foreground">
+                          Selected profile
+                        </div>
+                        <h3 className="mt-1 font-display text-lg font-semibold">
+                          {selectedAts.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono text-2xl font-bold text-primary-glow">
+                        {Math.round(selectedAts.score)}
+                      </div>
+                      <div className="font-mono-label text-success">{selectedAts.label}</div>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+                    {selectedAts.description}
+                  </p>
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <div className="rounded-lg border border-border/70 bg-surface/55 px-3 py-2.5">
+                      <div className="font-mono-label text-muted-foreground">Passed</div>
+                      <div className="mt-1 font-mono text-sm font-semibold text-success">
+                        {selectedAts.checks_passed} checks
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-surface/55 px-3 py-2.5">
+                      <div className="font-mono-label text-muted-foreground">Review</div>
+                      <div className="mt-1 font-mono text-sm font-semibold text-foreground">
+                        {selectedAts.diagnostics.length} items
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-surface/45 p-5 md:p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-mono-label text-muted-foreground">Evidence review</div>
+                      <h3 className="mt-1 font-display font-semibold">What this profile checks</h3>
+                    </div>
+                    <span className="rounded-full border border-border bg-surface-2/60 px-3 py-1 font-mono-label text-muted-foreground">
+                      {selectedAts.diagnostics.length} open
+                    </span>
+                  </div>
+                  {selectedAts.diagnostics.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {selectedAts.diagnostics.slice(0, 4).map((diagnostic) => (
+                        <div
+                          key={diagnostic.key}
+                          className="rounded-lg border border-warning/20 bg-warning/[0.045] p-4 transition hover:border-warning/35"
+                        >
+                          <div className="flex items-start gap-3">
+                            <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                            <div>
+                              <div className="text-sm font-semibold">{diagnostic.title}</div>
+                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                {diagnostic.detail}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex min-h-32 items-center gap-4 rounded-lg border border-success/25 bg-success/[0.045] p-5">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-full border border-success/30 bg-success/10">
+                        <CheckCircle2 className="size-5 text-success" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-success">All checks passed</div>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          No parsing risks were found for this compatibility profile.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-3 rounded-xl border border-border/80 bg-surface-2/25 p-4 text-xs leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary-glow" />
+                <span>{result.ats_compatibility_disclaimer}</span>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {result.formatting_diagnostics?.length > 0 && (
+        <section className="glass rounded-xl p-6 md:p-7">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="font-mono-label text-warning">PRIORITIZED_FIXES</div>
+              <h2 className="mt-2 font-display text-2xl font-semibold">
+                Fix the highest-impact parsing risks first
+              </h2>
+            </div>
+            <span className="font-mono-label text-muted-foreground">
+              {result.formatting_diagnostics.length} open checks
+            </span>
+          </div>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {result.formatting_diagnostics.slice(0, 6).map((diagnostic, index) => (
+              <article
+                key={diagnostic.key}
+                className="rounded-lg border border-border bg-surface-2/30 p-5"
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`grid size-9 shrink-0 place-items-center rounded-md border font-mono text-xs font-bold ${
+                      diagnostic.severity === "critical"
+                        ? "border-destructive/35 bg-destructive/10 text-destructive"
+                        : diagnostic.severity === "important"
+                          ? "border-warning/35 bg-warning/10 text-warning"
+                          : "border-primary/30 bg-primary/10 text-primary-glow"
+                    }`}
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display font-semibold">{diagnostic.title}</h3>
+                      <span className="rounded-full border border-border px-2 py-0.5 font-mono-label text-muted-foreground">
+                        {diagnostic.category}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {diagnostic.detail}
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-foreground/90">
+                      {diagnostic.recommendation}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="glass rounded-xl p-6">

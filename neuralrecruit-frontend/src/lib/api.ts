@@ -158,6 +158,27 @@ export interface SuggestedRole {
   evidence_count: number;
 }
 
+export interface ResumeDiagnostic {
+  key: string;
+  category: string;
+  severity: "critical" | "important" | "optional" | string;
+  title: string;
+  detail: string;
+  recommendation: string;
+  passed: boolean;
+}
+
+export interface ATSCompatibilityProfile {
+  key: string;
+  name: string;
+  score: number;
+  label: string;
+  description: string;
+  checks_passed: number;
+  checks_total: number;
+  diagnostics: ResumeDiagnostic[];
+}
+
 export interface ResumeReviewResult {
   review_type: "resume_review";
   review_id: string;
@@ -172,6 +193,9 @@ export interface ResumeReviewResult {
   strengths: string[];
   recommendations: string[];
   suggested_roles: SuggestedRole[];
+  formatting_diagnostics: ResumeDiagnostic[];
+  ats_compatibility_profiles: ATSCompatibilityProfile[];
+  ats_compatibility_disclaimer: string;
   review_summary: string;
   processing_time_seconds: number;
   analyzer_name: string;
@@ -349,10 +373,18 @@ export async function reviewResume(
       "The resume review service is still waking up. Please wait a few seconds and try again.",
     );
   }
-  return handleJsonResponse<ResumeReviewResult>(
+  const result = await handleJsonResponse<ResumeReviewResult>(
     res,
     "Something went wrong while reviewing the resume. Please try again.",
   );
+  return {
+    ...result,
+    formatting_diagnostics: result.formatting_diagnostics ?? [],
+    ats_compatibility_profiles: result.ats_compatibility_profiles ?? [],
+    ats_compatibility_disclaimer:
+      result.ats_compatibility_disclaimer ??
+      "Compatibility profiles are deterministic guidance, not official ATS vendor scores.",
+  };
 }
 
 export interface RankedCandidate {
