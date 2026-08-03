@@ -1529,7 +1529,7 @@ function ResumeReviewView({
           </div>
 
           <div
-            className="relative grid gap-3 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 xl:grid-cols-6"
+            className="relative grid snap-x snap-mandatory auto-cols-[minmax(248px,82vw)] grid-flow-col gap-3 overflow-x-auto p-4 pb-5 [scrollbar-color:hsl(var(--primary))_hsl(var(--border)/0.5)] [scrollbar-width:thin] sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-2 sm:overflow-visible sm:p-6 sm:[scrollbar-width:auto] lg:grid-cols-3 xl:grid-cols-6"
             role="group"
             aria-label="ATS compatibility profiles"
           >
@@ -1553,7 +1553,7 @@ function ResumeReviewView({
                   key={profile.key}
                   aria-pressed={selected}
                   onClick={() => setSelectedAtsKey(profile.key)}
-                  className={`group relative min-h-44 min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`group relative min-h-44 min-w-0 snap-start overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:snap-none ${
                     selected
                       ? "-translate-y-0.5 border-primary/50 bg-primary/[0.09] shadow-[0_16px_36px_-24px_hsl(var(--primary)/0.75)]"
                       : "border-border/80 bg-surface-2/45 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-surface-2/80"
